@@ -1,0 +1,20 @@
+{
+  "name": "Power Orb",
+  "version": "1.0.0",
+  "slug": "power_orb",
+  "arch": ["armv7", "arm64", "amd64"],
+  "startup": "application",
+  "boot": "auto",
+  "webui": "http://[HOST]:[PORT]/",
+  "ports": {
+    "80/tcp": 80
+  },
+  "options": {},
+  "schema": {
+    "entity_id": {
+      "type": "string",
+      "default": "sensor.home_power",
+      "description": "Home Assistant sensor entity for power readings"
+    }
+  }
+}
