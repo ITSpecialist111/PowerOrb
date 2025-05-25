@@ -1,7 +1,7 @@
 {
   "name": "Power Orb",
   "slug": "power_orb",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Realtime energy-usage visualisation panel for Home Assistant",
   "url": "https://github.com/ITSpecialist111/PowerOrb",
 
@@ -15,12 +15,10 @@
   "panel_title": "Power Orb",
   "homeassistant_api": true,
 
-  "ports": { "8080/tcp": 8080 },
-
   "options": {
-    "entity_id": "sensor.home_power"
+    "entity_id": ""
   },
   "schema": {
-    "entity_id": "str"
+    "entity_id": "str?"
   }
 }

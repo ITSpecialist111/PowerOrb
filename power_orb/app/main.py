@@ -1,12 +1,10 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
-import os
+import os, pathlib
 
-app = FastAPI(title="Power Orb")
-
-BASE_DIR = os.path.dirname(__file__)
-INDEX = os.path.join(BASE_DIR, "..", "www", "index.html")
+BASE = pathlib.Path(__file__).parent.parent
+app  = FastAPI(title="Power Orb")
 
 @app.get("/", include_in_schema=False)
-async def root():
-    return FileResponse(INDEX)
+async def index():
+    return FileResponse(BASE / "www" / "index.html")

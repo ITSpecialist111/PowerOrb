@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Power Orb</title>
 
- <!-- Chart.js 3.x + streaming plugin 2.x (compatible pair) -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-streaming@2.0.0/dist/chartjs-plugin-streaming.min.js"></script>
+  <!-- Compatible pair: Chart.js 3.9.1 + streaming plugin 2.0.0 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-streaming@2.0.0/dist/chartjs-plugin-streaming.min.js"></script>
 
   <style>
-    body{font-family:sans-serif;text-align:center;margin:0;padding:2rem;background:#111;color:#fafafa}
+    body{margin:0;padding:2rem;font-family:sans-serif;background:#111;color:#fafafa;text-align:center}
     canvas{max-width:600px;width:90vw;margin:0 auto}
     h2{margin:0 0 1rem;font-weight:600}
   </style>
@@ -20,74 +20,47 @@
   <canvas id="orb"></canvas>
 
   <script>
-    /* ---------- config ---------- */
-    const ENTITY = "{{ENTITY_ID}}";           // replaced at run-time
-    const DURATION = 60_000;                  // ms visible
-    const REFRESH  = 2_000;                   // ms polling
+    /* ---------- runtime config injected by run.sh ---------- */
+    const ENTITY = "{{ENTITY_ID}}";     // ← replaced before container starts
 
-    /* ---------- live value store ---------- */
+    /* ---------- Chart setup ---------- */
+    Chart.register(window.chartjsPluginStreaming);
+    const ctx = document.getElementById("orb");
     let latest = 0;
 
-    /* ---------- websocket -> Home-Assistant ---------- */
-    const wsUrl =
-      location.protocol.replace("http","ws") + "//" + location.host + "/api/websocket";
-
-    const sock = new WebSocket(wsUrl);
-    sock.onopen = () => sock.send(JSON.stringify({type:"auth",access_token:null}));
-
-    sock.onmessage = (ev) => {
-      const msg = JSON.parse(ev.data);
-
-      // once authenticated, subscribe to state changes of our entity
-      if (msg.type === "auth_ok") {
-        sock.send(JSON.stringify({
-          id: 1,
-          type: "subscribe_events",
-          event_type: "state_changed",
-          entity_id: ENTITY
-        }));
-        return;
-      }
-
-      // update value
-      const ns = msg.event?.data?.new_state;
-      if (ns && ns.entity_id === ENTITY) {
-        const num = parseFloat(ns.state);
-        if (!isNaN(num)) latest = num;
-      }
-    };
-
-    /* ---------- Chart.js streaming setup ---------- */
-    Chart.register(window.ChartStreaming);
-
-    const ctx = document.getElementById("orb");
     new Chart(ctx, {
       type: "line",
-      data: { datasets: [{
-        label: "Power (W)",
-        borderColor: "#4dc9c9",
-        borderWidth: 2,
-        data: []
-      }]},
-      options: {
-        animation: false,
-        scales: {
-          x: {
-            type: "realtime",
-            realtime: {
-              duration: DURATION,
-              refresh: REFRESH,
-              delay: REFRESH,
-              onRefresh: (chart) => {
-                chart.data.datasets[0].data.push({x: Date.now(), y: latest});
-              }
-            }
-          },
-          y: { title: { display: true, text: "Watts" } }
+      data: { datasets:[{label:"Power (W)",borderColor:"#4dc9c9",borderWidth:2,data:[]}] },
+      options:{
+        animation:false,
+        scales:{
+          x:{type:"realtime",realtime:{
+            duration:60000, refresh:2000, delay:2000,
+            onRefresh:c=>c.data.datasets[0].data.push({x:Date.now(),y:latest})
+          }},
+          y:{title:{display:true,text:"Watts"}}
         },
-        plugins: { legend: { display: false } }
+        plugins:{legend:{display:false}}
       }
     });
+
+    /* ---------- Home-Assistant WebSocket ---------- */
+    const ws = new WebSocket(
+      location.protocol.replace("http","ws")+"//"+location.host+"/api/websocket"
+    );
+
+    ws.onopen   = () => ws.send(JSON.stringify({type:"auth"}));
+    ws.onmessage= ev => {
+      const m = JSON.parse(ev.data);
+      if(m.type==="auth_ok"){
+        ws.send(JSON.stringify({id:1,type:"subscribe_events",event_type:"state_changed"}));
+        return;
+      }
+      const ns=m.event?.data?.new_state;
+      if(ns && ns.entity_id===ENTITY){
+        const v=parseFloat(ns.state); if(!isNaN(v)) latest=v;
+      }
+    };
   </script>
 </body>
 </html>
