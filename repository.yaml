@@ -1,3 +1,4 @@
 name: Power Orb Add-on Repository
 url: https://github.com/ITSpecialist111/PowerOrb
-maintainer: ITSpecialist111 
+maintainer: Graham Hosking graham@hosking.wales
+homeassistant_version: "2024.2"   # optional min version
