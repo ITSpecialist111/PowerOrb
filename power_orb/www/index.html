@@ -1,66 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Power Orb</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Power Orb</title>
 
-  <!-- Compatible pair: Chart.js 3.9.1 + streaming plugin 2.0.0 -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-streaming@2.0.0/dist/chartjs-plugin-streaming.min.js"></script>
+<!-- Compatible pair -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-streaming@2.0.0/dist/chartjs-plugin-streaming.min.js"></script>
 
-  <style>
-    body{margin:0;padding:2rem;font-family:sans-serif;background:#111;color:#fafafa;text-align:center}
-    canvas{max-width:600px;width:90vw;margin:0 auto}
-    h2{margin:0 0 1rem;font-weight:600}
-  </style>
+<style>
+ body{margin:0;padding:2rem;font-family:sans-serif;background:#111;color:#fafafa;text-align:center}
+ canvas{max-width:600px;width:90vw;margin:0 auto}
+ h2{margin:0 0 1rem;font-weight:600}
+</style>
 </head>
 <body>
-  <h2>Power Orb</h2>
-  <canvas id="orb"></canvas>
+<h2>Power Orb</h2>
+<canvas id="orb"></canvas>
 
-  <script>
-    /* ---------- runtime config injected by run.sh ---------- */
-    const ENTITY = "{{ENTITY_ID}}";     // ← replaced before container starts
+<script>
+/* ---------- entity id injected by run.sh ---------- */
+const ENTITY = "{{ENTITY_ID}}";
 
-    /* ---------- Chart setup ---------- */
-    Chart.register(window.chartjsPluginStreaming);
-    const ctx = document.getElementById("orb");
-    let latest = 0;
+/* ---------- chart ---------- */
+Chart.register(window.ChartStreaming);
+let latest = 0;
 
-    new Chart(ctx, {
-      type: "line",
-      data: { datasets:[{label:"Power (W)",borderColor:"#4dc9c9",borderWidth:2,data:[]}] },
-      options:{
-        animation:false,
-        scales:{
-          x:{type:"realtime",realtime:{
-            duration:60000, refresh:2000, delay:2000,
-            onRefresh:c=>c.data.datasets[0].data.push({x:Date.now(),y:latest})
-          }},
-          y:{title:{display:true,text:"Watts"}}
-        },
-        plugins:{legend:{display:false}}
-      }
-    });
+new Chart(document.getElementById("orb"),{
+  type:"line",
+  data:{datasets:[{label:"Power",borderColor:"#4dc9c9",borderWidth:2,data:[]}]},
+  options:{
+    animation:false,
+    scales:{
+      x:{type:"realtime",realtime:{
+        duration:60000,refresh:2000,delay:2000,
+        onRefresh:c=>c.data.datasets[0].data.push({x:Date.now(),y:latest})
+      }},
+      y:{title:{display:true,text:"Watts"}}
+    },
+    plugins:{legend:{display:false}}
+  }
+});
 
-    /* ---------- Home-Assistant WebSocket ---------- */
-    const ws = new WebSocket(
-      location.protocol.replace("http","ws")+"//"+location.host+"/api/websocket"
-    );
-
-    ws.onopen   = () => ws.send(JSON.stringify({type:"auth"}));
-    ws.onmessage= ev => {
-      const m = JSON.parse(ev.data);
-      if(m.type==="auth_ok"){
-        ws.send(JSON.stringify({id:1,type:"subscribe_events",event_type:"state_changed"}));
-        return;
-      }
-      const ns=m.event?.data?.new_state;
-      if(ns && ns.entity_id===ENTITY){
-        const v=parseFloat(ns.state); if(!isNaN(v)) latest=v;
-      }
-    };
-  </script>
+/* ---------- Home-Assistant websocket ---------- */
+const ws = new WebSocket(
+  location.protocol.replace("http","ws")+"//"+location.host+"/api/websocket"
+);
+ws.onopen   = ()=>ws.send(JSON.stringify({type:"auth"}));
+ws.onmessage= ev=>{
+  const m = JSON.parse(ev.data);
+  if(m.type==="auth_ok"){
+    ws.send(JSON.stringify({id:1,type:"subscribe_events",event_type:"state_changed"}));
+    return;
+  }
+  const ns=m.event?.data?.new_state;
+  if(ns && ns.entity_id===ENTITY){
+    const v=parseFloat(ns.state); if(!isNaN(v)) latest=v;
+  }
+};
+</script>
 </body>
 </html>

@@ -1,11 +1,11 @@
 {
   "name": "Power Orb",
   "slug": "power_orb",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "description": "Realtime energy-usage visualisation panel for Home Assistant",
   "url": "https://github.com/ITSpecialist111/PowerOrb",
 
-  "arch": ["aarch64", "amd64", "armv7"],
+  "arch": [ "aarch64", "amd64", "armv7" ],
   "startup": "application",
   "boot": "auto",
 
@@ -15,10 +15,6 @@
   "panel_title": "Power Orb",
   "homeassistant_api": true,
 
-  "options": {
-    "entity_id": ""
-  },
-  "schema": {
-    "entity_id": "str?"
-  }
+  "options": { "entity_id": "" },
+  "schema":  { "entity_id": "str?" }
 }

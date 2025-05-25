@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
-import os, pathlib
+import pathlib
 
 BASE = pathlib.Path(__file__).parent.parent
 app  = FastAPI(title="Power Orb")
