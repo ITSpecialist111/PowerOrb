@@ -1,11 +1,11 @@
 #!/usr/bin/with-contenv sh
 set -e
 
-# Parse options
-CONFIG_PATH=/data/options.json
-ENTITY_ID=$(jq --raw-output '.entity_id' "$CONFIG_PATH")
+# Load add-on options
+CONFIG_PATH="/data/options.json"
+ENTITY_ID=$(jq --raw-output ".entity_id" "$CONFIG_PATH")
 
-# Build frontend
+# Build React frontend
 cd /data/frontend
 npm ci
 npm run build

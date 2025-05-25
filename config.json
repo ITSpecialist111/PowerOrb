@@ -2,7 +2,7 @@
   "name": "Power Orb",
   "version": "1.0.0",
   "slug": "power_orb",
-  "description": "Real‑time energy visualization panel for Home Assistant",
+  "description": "Realtime energy visualization panel for Home Assistant",
   "arch": ["armv7", "arm64", "amd64"],
   "startup": "application",
   "boot": "auto",
@@ -11,7 +11,7 @@
     "entity_id": {
       "type": "string",
       "default": "sensor.home_power",
-      "description": "Home Assistant sensor entity for power readings"
+      "description": "Sensor entity for power readings"
     }
   }
 }

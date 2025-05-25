@@ -10,6 +10,5 @@ ReactDOM.render(
   <EnergyMonitorVisualization
     haUrl={wsUrl}
     sensorEntity={entityId}
-  />, 
-  document.getElementById('root')
+  />, document.getElementById('root')
 );
