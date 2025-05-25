@@ -1,18 +1,26 @@
 {
   "name": "Power Orb",
-  "version": "1.0.0",
   "slug": "power_orb",
-  "description": "Realtime energy visualization panel for Home Assistant",
+  "version": "1.0.0",
+  "description": "Realtime energy-usage visualisation panel for Home Assistant",
+  "url": "https://github.com/ITSpecialist111/PowerOrb",
+
   "arch": ["aarch64", "amd64", "armv7"],
   "startup": "application",
   "boot": "auto",
-  "options": {},
+
+  "ingress": true,
+  "ingress_port": 80,
+  "panel_icon": "mdi:flash",
+  "panel_title": "Power Orb",
   "homeassistant_api": true,
+
+  "ports": { "80/tcp": 80 },
+
+  "options": {
+    "entity_id": "sensor.home_power"
+  },
   "schema": {
-    "entity_id": {
-      "type": "string",
-      "default": "sensor.home_power",
-      "description": "Sensor entity for power readings"
-    }
+    "entity_id": "str"
   }
 }
