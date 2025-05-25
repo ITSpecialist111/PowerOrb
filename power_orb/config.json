@@ -1,7 +1,7 @@
 {
   "name": "Power Orb",
   "slug": "power_orb",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Realtime energy-usage visualisation panel for Home Assistant",
   "url": "https://github.com/ITSpecialist111/PowerOrb",
 
