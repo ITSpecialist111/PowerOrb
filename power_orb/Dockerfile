@@ -1,30 +1,27 @@
 # ─────────────────────────────────────────────────────────────
-# 1) Build the React frontend with Node (separate stage)
+# 1.  Build the React frontend (Node stage)
 # ─────────────────────────────────────────────────────────────
 FROM node:20-alpine AS build-frontend
 
 WORKDIR /app
-# copy lock-files first for better Docker caching
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+# copy manifest only, let Docker cache npm install
+COPY frontend/package.json ./
+RUN npm install --omit=dev           # no lock-file needed
 
-COPY frontend .
-RUN npm run build       # → /app/build (static bundle)
+COPY frontend ./
+RUN npm run build                    # creates /app/build
 
 # ─────────────────────────────────────────────────────────────
-# 2) Final add-on image – super-slim, no Node.js required
+# 2.  Final Home-Assistant add-on image
 # ─────────────────────────────────────────────────────────────
-ARG BUILD_FROM=homeassistant/amd64-addon-base:latest
+ARG BUILD_ARCH
+ARG BUILD_FROM=homeassistant/${BUILD_ARCH:-amd64}-base
 FROM ${BUILD_FROM}
 
-# s6-overlay already included in *-addon-base
 WORKDIR /opt/power_orb
-
-# copy pre-built static files
 COPY --from=build-frontend /app/build ./www
-# runtime launcher
 COPY run.sh .
 RUN chmod +x run.sh
 
-# nothing else to install; python3 is already in the base image
+# Start tiny Python web-server for ingress
 CMD [ "/opt/power_orb/run.sh" ]
