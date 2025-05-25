@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Power Orb</title>
+
+  <!-- Chart.js + streaming plugin straight from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-streaming@2.0.0/dist/chartjs-plugin-streaming.umd.min.js"></script>
+
+  <style>
+    body{font-family:sans-serif;text-align:center;margin:0;padding:2rem;background:#111;color:#fafafa}
+    canvas{max-width:600px;width:90vw;margin:0 auto}
+    h2{margin:0 0 1rem;font-weight:600}
+  </style>
+</head>
+<body>
+  <h2>Power Orb</h2>
+  <canvas id="orb"></canvas>
+
+  <script>
+    /* ---------- config ---------- */
+    const ENTITY = "{{ENTITY_ID}}";           // replaced at run-time
+    const DURATION = 60_000;                  // ms visible
+    const REFRESH  = 2_000;                   // ms polling
+
+    /* ---------- live value store ---------- */
+    let latest = 0;
+
+    /* ---------- websocket -> Home-Assistant ---------- */
+    const wsUrl =
+      location.protocol.replace("http","ws") + "//" + location.host + "/api/websocket";
+
+    const sock = new WebSocket(wsUrl);
+    sock.onopen = () => sock.send(JSON.stringify({type:"auth",access_token:null}));
+
+    sock.onmessage = (ev) => {
+      const msg = JSON.parse(ev.data);
+
+      // once authenticated, subscribe to state changes of our entity
+      if (msg.type === "auth_ok") {
+        sock.send(JSON.stringify({
+          id: 1,
+          type: "subscribe_events",
+          event_type: "state_changed",
+          entity_id: ENTITY
+        }));
+        return;
+      }
+
+      // update value
+      const ns = msg.event?.data?.new_state;
+      if (ns && ns.entity_id === ENTITY) {
+        const num = parseFloat(ns.state);
+        if (!isNaN(num)) latest = num;
+      }
+    };
+
+    /* ---------- Chart.js streaming setup ---------- */
+    Chart.register(window.ChartStreaming);
+
+    const ctx = document.getElementById("orb");
+    new Chart(ctx, {
+      type: "line",
+      data: { datasets: [{
+        label: "Power (W)",
+        borderColor: "#4dc9c9",
+        borderWidth: 2,
+        data: []
+      }]},
+      options: {
+        animation: false,
+        scales: {
+          x: {
+            type: "realtime",
+            realtime: {
+              duration: DURATION,
+              refresh: REFRESH,
+              delay: REFRESH,
+              onRefresh: (chart) => {
+                chart.data.datasets[0].data.push({x: Date.now(), y: latest});
+              }
+            }
+          },
+          y: { title: { display: true, text: "Watts" } }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+  </script>
+</body>
+</html>

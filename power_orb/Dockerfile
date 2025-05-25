@@ -1,27 +1,31 @@
-# ─────────────────────────────────────────────────────────────
-# 1.  Build the React frontend (Node stage)
-# ─────────────────────────────────────────────────────────────
-FROM node:20-alpine AS build-frontend
+#################################################################
+#  Power Orb – identical build pattern to Automation-Inspector  #
+#################################################################
+
+FROM python:3.11-alpine
+
+# add minimal OS deps
+RUN apk add --no-cache bash
 
 WORKDIR /app
-# copy manifest only, let Docker cache npm install
-COPY frontend/package.json ./
-RUN npm install --omit=dev           # no lock-file needed
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY frontend ./
-RUN npm run build                    # creates /app/build
+# app code & static bundle
+COPY app/ /app/app
+COPY www/ /app/www
 
-# ─────────────────────────────────────────────────────────────
-# 2.  Final Home-Assistant add-on image
-# ─────────────────────────────────────────────────────────────
-ARG BUILD_ARCH
-ARG BUILD_FROM=homeassistant/${BUILD_ARCH:-amd64}-base
-FROM ${BUILD_FROM}
+# small launcher to inject entity_id into the HTML then start uvicorn
+RUN printf '%s\n' \
+  '#!/usr/bin/env bash' \
+  'set -e' \
+  '' \
+  '# inject selected entity into the front-end' \
+  'ENTITY=$(jq -r .entity_id /data/options.json)' \
+  'sed -i "s/{{ENTITY_ID}}/${ENTITY}/" /app/www/index.html' \
+  '' \
+  'exec uvicorn app.main:app --host 0.0.0.0 --port 8080' \
+  > /app/run.sh     && chmod +x /app/run.sh
 
-WORKDIR /opt/power_orb
-COPY --from=build-frontend /app/build ./www
-COPY run.sh .
-RUN chmod +x run.sh
-
-# Start tiny Python web-server for ingress
-CMD [ "/opt/power_orb/run.sh" ]
+EXPOSE 8080
+ENTRYPOINT ["/app/run.sh"]
