@@ -1,20 +1,16 @@
-# Stage 1: build React app
-FROM node:18-alpine as builder
+ARG BUILD_FROM=homeassistant/armv7-addon:1.0.0
+ARG BUILD_FROM_CPU=homeassistant/arm64-addon:1.0.0
+FROM $BUILD_FROM as builder
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend ./
 RUN npm run build
 
-# Stage 2: serve build in lightweight Python container
-FROM python:3.11-alpine
+FROM homeassistant/armv7-addon:1.0.0
 WORKDIR /data
-# Copy built frontend
+# Copy build and run script
 COPY --from=builder /app/build ./frontend/build
-# Copy run script
 COPY run.sh ./
-# Install simple HTTP server dependency
-RUN apk add --no-cache python3 py3-pip && \
-    pip install aiohttp
-
+RUN apk add --no-cache python3 py3-pip && pip install aiohttp
 CMD ["/data/run.sh"]
