@@ -102,8 +102,8 @@ npm install
 npm run check
 ```
 
-The HACS artifacts are generated in `dist/` and must be committed whenever the
-source changes. CI rebuilds them and fails if the committed output is stale.
+The HACS artifact is generated in `dist/` and must be committed whenever the
+source changes. CI rebuilds it and fails if the committed output is stale.
 
 ## HACS troubleshooting
 

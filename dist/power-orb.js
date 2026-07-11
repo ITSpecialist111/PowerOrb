@@ -906,5 +906,3 @@ Q([q({ attribute: !1 })], $.prototype, "hass", null), Q([J()], $.prototype, "cha
 });
 //#endregion
 export { $ as PowerOrbCard };
-
-//# sourceMappingURL=power-orb.js.map

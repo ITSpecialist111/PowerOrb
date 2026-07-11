@@ -7,7 +7,7 @@ export default defineConfig({
       formats: ["es"],
       fileName: () => "power-orb.js",
     },
-    sourcemap: true,
+    sourcemap: false,
   },
   test: {
     include: ["test/**/*.test.ts"],

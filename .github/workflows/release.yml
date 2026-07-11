@@ -27,6 +27,5 @@ jobs:
         run: >-
           gh release create "${GITHUB_REF_NAME}"
           dist/power-orb.js
-          dist/power-orb.js.map
           --generate-notes
           --title "${GITHUB_REF_NAME}"
