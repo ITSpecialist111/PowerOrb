@@ -1,14 +1,99 @@
 # Power Orb
 
-A Home Assistant Supervisor add‑on that visualizes your energy sensor in real time.
+Power Orb is a real-time energy visualization card for Home Assistant 2026. It
+uses the power sensors already configured in Home Assistant's Energy dashboard,
+so it needs no server, access token, or duplicate entity configuration.
+
+The original Supervisor add-on has been replaced by a Lovelace custom card. The
+old add-on attempted to open Home Assistant's authenticated WebSocket from an
+Ingress page without a token and could not receive state updates. Power Orb now
+runs inside Home Assistant and uses its authenticated frontend API.
+
+## Features
+
+- Automatically discovers solar, grid, and battery power sensors
+- Reacts when Energy dashboard preferences change
+- Supports W, kW, and MW source sensors
+- Animated, responsive orb with a rolling live trend
+- Works offline after installation; no CDN resources
+- Honors reduced-motion accessibility preferences
+- Optional direct power entity for installations without Energy configuration
+- Native refresh signal for automation and MCP integrations
 
 ## Installation
-1. In Supervisor → Add‑on Store, add your repo: `https://github.com/ITSpecialist111/PowerOrb`
-2. Install and start **Power Orb**
-3. Open the Power Orb panel via sidebar or Ingress
+
+### HACS
+
+1. Open HACS and add `https://github.com/ITSpecialist111/PowerOrb` as a custom
+   **Dashboard** repository.
+2. Install **Power Orb**.
+3. Refresh Home Assistant, then add a manual card to a dashboard:
+
+```yaml
+type: custom:power-orb
+```
+
+### Manual
+
+1. Download `power-orb.js` from the latest release into
+   `/config/www/power-orb/`.
+2. Add `/local/power-orb/power-orb.js` as a JavaScript module under
+   **Settings → Dashboards → Resources**.
+3. Add the card using the YAML above.
 
 ## Configuration
-- **Sensor Entity**: using add‑on options, set the entity (default `sensor.home_power`).
 
-Enjoy a live, moving chart of your home’s power draw!
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | string | `Power Orb` | Card heading |
+| `entity` | string | auto-discovered | Direct instantaneous power sensor |
+| `max_power` | number | dynamic / 5000 W | Power level at maximum glow |
+| `unit` | `W` or `kW` | automatic | Display unit |
+
+Example:
+
+```yaml
+type: custom:power-orb
+name: House load
+entity: sensor.home_power
+max_power: 10000
+unit: kW
 ```
+
+For automatic discovery, configure real-time power sensors in
+**Settings → Dashboards → Energy**. Cumulative kWh meters are intentionally not
+converted into live power because that produces inaccurate values between
+meter updates.
+
+## HASS MCP OpenClaw
+
+Power Orb and
+[HASS_MCP_OpenClaw](https://github.com/ITSpecialist111/HASS_MCP_OpenClaw)
+integrate through Home Assistant rather than exchanging credentials directly.
+OpenClaw can discover the same Energy sensors, stream their state changes,
+create threshold automations, tune `max_power`, and add the card to a Lovelace
+dashboard with its existing Energy, event, recorder, and dashboard tools.
+
+After OpenClaw changes Energy preferences, it can ask every visible Power Orb
+card to refresh immediately:
+
+```text
+fire_event_full("power_orb_refresh", {})
+```
+
+Power Orb also reloads Energy preferences periodically, so this signal is an
+optimization rather than a requirement. No MCP token is ever sent to the
+browser.
+
+## Development
+
+Requires Node.js 22 or newer.
+
+```bash
+npm install
+npm run typecheck
+npm test
+npm run build
+```
+
+The HACS artifact is generated at `dist/power-orb.js`.

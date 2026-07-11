@@ -1,0 +1,46 @@
+{
+  "name": "power-orb-card",
+  "version": "2.0.0",
+  "description": "A real-time Home Assistant energy visualization card",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ITSpecialist111/PowerOrb.git"
+  },
+  "keywords": [
+    "home-assistant",
+    "hacs",
+    "energy",
+    "lovelace"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ITSpecialist111/PowerOrb/issues"
+  },
+  "homepage": "https://github.com/ITSpecialist111/PowerOrb#readme",
+  "dependencies": {
+    "lit": "3.3.3"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "vite": "8.1.4",
+    "vitest": "4.1.10"
+  },
+  "dependencies": {
+    "lit": "3.3.3"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "vite": "8.1.4",
+    "vitest": "4.1.10"
+  }
+}
