@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   discoverPowerChannels,
   entityPowerInWatts,
+  powerInsights,
+  powerSnapshotInWatts,
   totalPowerInWatts,
 } from "../src/energy";
 
@@ -21,9 +23,9 @@ describe("discoverPowerChannels", () => {
         ],
       }),
     ).toEqual([
-      { entityId: "sensor.solar_power", multiplier: 1 },
-      { entityId: "sensor.grid_import", multiplier: 1 },
-      { entityId: "sensor.grid_export", multiplier: -1 },
+      { entityId: "sensor.solar_power", multiplier: 1, role: "solar" },
+      { entityId: "sensor.grid_import", multiplier: 1, role: "grid_import" },
+      { entityId: "sensor.grid_export", multiplier: -1, role: "grid_export" },
     ]);
   });
 
@@ -39,7 +41,7 @@ describe("discoverPowerChannels", () => {
           },
         ],
       }),
-    ).toEqual([{ entityId: "sensor.grid", multiplier: -1 }]);
+    ).toEqual([{ entityId: "sensor.grid", multiplier: -1, role: "grid" }]);
   });
 
   it("reads a grid rate defined on the energy source", () => {
@@ -47,7 +49,7 @@ describe("discoverPowerChannels", () => {
       discoverPowerChannels({
         energy_sources: [{ type: "grid", stat_rate: "sensor.net_grid" }],
       }),
-    ).toEqual([{ entityId: "sensor.net_grid", multiplier: 1 }]);
+    ).toEqual([{ entityId: "sensor.net_grid", multiplier: 1, role: "grid" }]);
   });
 
   it("reads a normalized battery rate defined on the energy source", () => {
@@ -55,7 +57,9 @@ describe("discoverPowerChannels", () => {
       discoverPowerChannels({
         energy_sources: [{ type: "battery", stat_rate: "sensor.battery_power" }],
       }),
-    ).toEqual([{ entityId: "sensor.battery_power", multiplier: 1 }]);
+    ).toEqual([
+      { entityId: "sensor.battery_power", multiplier: 1, role: "battery" },
+    ]);
   });
 
   it("does not double count directional sensors when a net sensor exists", () => {
@@ -72,7 +76,7 @@ describe("discoverPowerChannels", () => {
           },
         ],
       }),
-    ).toEqual([{ entityId: "sensor.battery", multiplier: 1 }]);
+    ).toEqual([{ entityId: "sensor.battery", multiplier: 1, role: "battery" }]);
   });
 });
 
@@ -114,9 +118,67 @@ describe("power calculations", () => {
     };
     expect(
       totalPowerInWatts(states, [
-        { entityId: "sensor.solar", multiplier: 1 },
-        { entityId: "sensor.grid", multiplier: 1 },
+        { entityId: "sensor.solar", multiplier: 1, role: "solar" },
+        { entityId: "sensor.grid", multiplier: 1, role: "grid" },
       ]),
     ).toBe(1500);
+  });
+
+  it("builds a dashboard snapshot from semantic energy channels", () => {
+    const states = {
+      "sensor.solar": {
+        state: "4.5",
+        attributes: { unit_of_measurement: "kW" },
+      },
+      "sensor.grid_import": {
+        state: "800",
+        attributes: { unit_of_measurement: "W" },
+      },
+      "sensor.grid_export": {
+        state: "1.2",
+        attributes: { unit_of_measurement: "kW" },
+      },
+      "sensor.battery_charge": {
+        state: "500",
+        attributes: { unit_of_measurement: "W" },
+      },
+    };
+
+    expect(
+      powerSnapshotInWatts(states, [
+        { entityId: "sensor.solar", multiplier: 1, role: "solar" },
+        { entityId: "sensor.grid_import", multiplier: 1, role: "grid_import" },
+        { entityId: "sensor.grid_export", multiplier: -1, role: "grid_export" },
+        { entityId: "sensor.battery_charge", multiplier: -1, role: "battery_charge" },
+      ]),
+    ).toEqual({
+      solar: 4500,
+      gridImport: 800,
+      gridExport: 1200,
+      batteryCharge: 500,
+      batteryDischarge: 0,
+      homeLoad: 3600,
+      activeChannels: 4,
+    });
+  });
+
+  it("derives automatic self-power and solar-use insights", () => {
+    expect(
+      powerInsights({
+        solar: 4500,
+        gridImport: 800,
+        gridExport: 1200,
+        batteryCharge: 500,
+        batteryDischarge: 0,
+        homeLoad: 3600,
+        activeChannels: 4,
+      }),
+    ).toEqual({
+      selfPoweredPercent: 78,
+      solarUsedPercent: 73,
+      netGridWatts: -400,
+      netBatteryWatts: -500,
+      recommendation: "Solar surplus now: run flexible loads or charge storage.",
+    });
   });
 });

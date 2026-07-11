@@ -254,34 +254,34 @@ var v = class extends HTMLElement {
 v.elementStyles = [], v.shadowRootOptions = { mode: "open" }, v[m("elementProperties")] = /* @__PURE__ */ new Map(), v[m("finalized")] = /* @__PURE__ */ new Map(), ie?.({ ReactiveElement: v }), (f.reactiveElementVersions ??= []).push("2.1.2");
 //#endregion
 //#region node_modules/lit-html/lit-html.js
-var y = globalThis, b = (e) => e, x = y.trustedTypes, ae = x ? x.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, S = "$lit$", C = `lit$${Math.random().toFixed(9).slice(2)}$`, w = "?" + C, oe = `<${w}>`, T = document, E = () => T.createComment(""), D = (e) => e === null || typeof e != "object" && typeof e != "function", O = Array.isArray, se = (e) => O(e) || typeof e?.[Symbol.iterator] == "function", k = "[ 	\n\f\r]", A = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ce = /-->/g, j = />/g, M = RegExp(`>|${k}(?:([^\\s"'>=/]+)(${k}*=${k}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), le = /'/g, ue = /"/g, N = /^(?:script|style|textarea|title)$/i, P = (e) => (t, ...n) => ({
+var y = globalThis, b = (e) => e, x = y.trustedTypes, ae = x ? x.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, S = "$lit$", C = `lit$${Math.random().toFixed(9).slice(2)}$`, w = "?" + C, oe = `<${w}>`, T = document, E = () => T.createComment(""), D = (e) => e === null || typeof e != "object" && typeof e != "function", O = Array.isArray, se = (e) => O(e) || typeof e?.[Symbol.iterator] == "function", k = "[ 	\n\f\r]", A = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ce = /-->/g, j = />/g, M = RegExp(`>|${k}(?:([^\\s"'>=/]+)(${k}*=${k}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), le = /'/g, ue = /"/g, de = /^(?:script|style|textarea|title)$/i, N = (e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
-}), F = P(1), de = P(2), I = Symbol.for("lit-noChange"), L = Symbol.for("lit-nothing"), R = /* @__PURE__ */ new WeakMap(), z = T.createTreeWalker(T, 129);
-function B(e, t) {
+}), P = N(1), fe = N(2), F = Symbol.for("lit-noChange"), I = Symbol.for("lit-nothing"), L = /* @__PURE__ */ new WeakMap(), R = T.createTreeWalker(T, 129);
+function z(e, t) {
 	if (!O(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
 	return ae === void 0 ? t : ae.createHTML(t);
 }
-var fe = (e, t) => {
+var pe = (e, t) => {
 	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = A;
 	for (let t = 0; t < n; t++) {
 		let n = e[t], s, c, l = -1, u = 0;
-		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === A ? c[1] === "!--" ? o = ce : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = M) : (N.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = M) : o = j : o === M ? c[0] === ">" ? (o = i ?? A, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? M : c[3] === "\"" ? ue : le) : o === ue || o === le ? o = M : o === ce || o === j ? o = A : (o = M, i = void 0);
+		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === A ? c[1] === "!--" ? o = ce : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = M) : (de.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = M) : o = j : o === M ? c[0] === ">" ? (o = i ?? A, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? M : c[3] === "\"" ? ue : le) : o === ue || o === le ? o = M : o === ce || o === j ? o = A : (o = M, i = void 0);
 		let d = o === M && e[t + 1].startsWith("/>") ? " " : "";
 		a += o === A ? n + oe : l >= 0 ? (r.push(s), n.slice(0, l) + S + n.slice(l) + C + d) : n + C + (l === -2 ? t : d);
 	}
-	return [B(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
-}, V = class e {
+	return [z(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
+}, B = class e {
 	constructor({ strings: t, _$litType$: n }, r) {
 		let i;
 		this.parts = [];
-		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = fe(t, n);
-		if (this.el = e.createElement(l, r), z.currentNode = this.el.content, n === 2 || n === 3) {
+		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = pe(t, n);
+		if (this.el = e.createElement(l, r), R.currentNode = this.el.content, n === 2 || n === 3) {
 			let e = this.el.content.firstChild;
 			e.replaceWith(...e.childNodes);
 		}
-		for (; (i = z.nextNode()) !== null && c.length < s;) {
+		for (; (i = R.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
 				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(S)) {
 					let t = u[o++], n = i.getAttribute(e).split(C), r = /([.?@])?(.*)/.exec(t);
@@ -290,17 +290,17 @@ var fe = (e, t) => {
 						index: a,
 						name: r[2],
 						strings: n,
-						ctor: r[1] === "." ? me : r[1] === "?" ? he : r[1] === "@" ? ge : W
+						ctor: r[1] === "." ? he : r[1] === "?" ? ge : r[1] === "@" ? _e : U
 					}), i.removeAttribute(e);
 				} else e.startsWith(C) && (c.push({
 					type: 6,
 					index: a
 				}), i.removeAttribute(e));
-				if (N.test(i.tagName)) {
+				if (de.test(i.tagName)) {
 					let e = i.textContent.split(C), t = e.length - 1;
 					if (t > 0) {
 						i.textContent = x ? x.emptyScript : "";
-						for (let n = 0; n < t; n++) i.append(e[n], E()), z.nextNode(), c.push({
+						for (let n = 0; n < t; n++) i.append(e[n], E()), R.nextNode(), c.push({
 							type: 2,
 							index: ++a
 						});
@@ -326,12 +326,12 @@ var fe = (e, t) => {
 		return n.innerHTML = e, n;
 	}
 };
-function H(e, t, n = e, r) {
-	if (t === I) return t;
+function V(e, t, n = e, r) {
+	if (t === F) return t;
 	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = D(t) ? void 0 : t._$litDirective$;
-	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = H(e, i._$AS(e, t.values), i, r)), t;
+	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = V(e, i._$AS(e, t.values), i, r)), t;
 }
-var pe = class {
+var me = class {
 	constructor(e, t) {
 		this._$AV = [], this._$AN = void 0, this._$AD = e, this._$AM = t;
 	}
@@ -343,27 +343,27 @@ var pe = class {
 	}
 	u(e) {
 		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? T).importNode(t, !0);
-		z.currentNode = r;
-		let i = z.nextNode(), a = 0, o = 0, s = n[0];
+		R.currentNode = r;
+		let i = R.nextNode(), a = 0, o = 0, s = n[0];
 		for (; s !== void 0;) {
 			if (a === s.index) {
 				let t;
-				s.type === 2 ? t = new U(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new _e(i, this, e)), this._$AV.push(t), s = n[++o];
+				s.type === 2 ? t = new H(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new ve(i, this, e)), this._$AV.push(t), s = n[++o];
 			}
-			a !== s?.index && (i = z.nextNode(), a++);
+			a !== s?.index && (i = R.nextNode(), a++);
 		}
-		return z.currentNode = T, r;
+		return R.currentNode = T, r;
 	}
 	p(e) {
 		let t = 0;
 		for (let n of this._$AV) n !== void 0 && (n.strings === void 0 ? n._$AI(e[t]) : (n._$AI(e, n, t), t += n.strings.length - 2)), t++;
 	}
-}, U = class e {
+}, H = class e {
 	get _$AU() {
 		return this._$AM?._$AU ?? this._$Cv;
 	}
 	constructor(e, t, n, r) {
-		this.type = 2, this._$AH = L, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
+		this.type = 2, this._$AH = I, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
 	}
 	get parentNode() {
 		let e = this._$AA.parentNode, t = this._$AM;
@@ -376,7 +376,7 @@ var pe = class {
 		return this._$AB;
 	}
 	_$AI(e, t = this) {
-		e = H(this, e, t), D(e) ? e === L || e == null || e === "" ? (this._$AH !== L && this._$AR(), this._$AH = L) : e !== this._$AH && e !== I && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? se(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
+		e = V(this, e, t), D(e) ? e === I || e == null || e === "" ? (this._$AH !== I && this._$AR(), this._$AH = I) : e !== this._$AH && e !== F && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? se(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
 	}
 	O(e) {
 		return this._$AA.parentNode.insertBefore(e, this._$AB);
@@ -385,19 +385,19 @@ var pe = class {
 		this._$AH !== e && (this._$AR(), this._$AH = this.O(e));
 	}
 	_(e) {
-		this._$AH !== L && D(this._$AH) ? this._$AA.nextSibling.data = e : this.T(T.createTextNode(e)), this._$AH = e;
+		this._$AH !== I && D(this._$AH) ? this._$AA.nextSibling.data = e : this.T(T.createTextNode(e)), this._$AH = e;
 	}
 	$(e) {
-		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = V.createElement(B(n.h, n.h[0]), this.options)), n);
+		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = B.createElement(z(n.h, n.h[0]), this.options)), n);
 		if (this._$AH?._$AD === r) this._$AH.p(t);
 		else {
-			let e = new pe(r, this), n = e.u(this.options);
+			let e = new me(r, this), n = e.u(this.options);
 			e.p(t), this.T(n), this._$AH = e;
 		}
 	}
 	_$AC(e) {
-		let t = R.get(e.strings);
-		return t === void 0 && R.set(e.strings, t = new V(e)), t;
+		let t = L.get(e.strings);
+		return t === void 0 && L.set(e.strings, t = new B(e)), t;
 	}
 	k(t) {
 		O(this._$AH) || (this._$AH = [], this._$AR());
@@ -414,7 +414,7 @@ var pe = class {
 	setConnected(e) {
 		this._$AM === void 0 && (this._$Cv = e, this._$AP?.(e));
 	}
-}, W = class {
+}, U = class {
 	get tagName() {
 		return this.element.tagName;
 	}
@@ -422,47 +422,47 @@ var pe = class {
 		return this._$AM._$AU;
 	}
 	constructor(e, t, n, r, i) {
-		this.type = 1, this._$AH = L, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = L;
+		this.type = 1, this._$AH = I, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = I;
 	}
 	_$AI(e, t = this, n, r) {
 		let i = this.strings, a = !1;
-		if (i === void 0) e = H(this, e, t, 0), a = !D(e) || e !== this._$AH && e !== I, a && (this._$AH = e);
+		if (i === void 0) e = V(this, e, t, 0), a = !D(e) || e !== this._$AH && e !== F, a && (this._$AH = e);
 		else {
 			let r = e, o, s;
-			for (e = i[0], o = 0; o < i.length - 1; o++) s = H(this, r[n + o], t, o), s === I && (s = this._$AH[o]), a ||= !D(s) || s !== this._$AH[o], s === L ? e = L : e !== L && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
+			for (e = i[0], o = 0; o < i.length - 1; o++) s = V(this, r[n + o], t, o), s === F && (s = this._$AH[o]), a ||= !D(s) || s !== this._$AH[o], s === I ? e = I : e !== I && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
 		}
 		a && !r && this.j(e);
 	}
 	j(e) {
-		e === L ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
+		e === I ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
 	}
-}, me = class extends W {
+}, he = class extends U {
 	constructor() {
 		super(...arguments), this.type = 3;
 	}
 	j(e) {
-		this.element[this.name] = e === L ? void 0 : e;
+		this.element[this.name] = e === I ? void 0 : e;
 	}
-}, he = class extends W {
+}, ge = class extends U {
 	constructor() {
 		super(...arguments), this.type = 4;
 	}
 	j(e) {
-		this.element.toggleAttribute(this.name, !!e && e !== L);
+		this.element.toggleAttribute(this.name, !!e && e !== I);
 	}
-}, ge = class extends W {
+}, _e = class extends U {
 	constructor(e, t, n, r, i) {
 		super(e, t, n, r, i), this.type = 5;
 	}
 	_$AI(e, t = this) {
-		if ((e = H(this, e, t, 0) ?? L) === I) return;
-		let n = this._$AH, r = e === L && n !== L || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== L && (n === L || r);
+		if ((e = V(this, e, t, 0) ?? I) === F) return;
+		let n = this._$AH, r = e === I && n !== I || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== I && (n === I || r);
 		r && this.element.removeEventListener(this.name, this, n), i && this.element.addEventListener(this.name, this, e), this._$AH = e;
 	}
 	handleEvent(e) {
 		typeof this._$AH == "function" ? this._$AH.call(this.options?.host ?? this.element, e) : this._$AH.handleEvent(e);
 	}
-}, _e = class {
+}, ve = class {
 	constructor(e, t, n) {
 		this.element = e, this.type = 6, this._$AN = void 0, this._$AM = t, this.options = n;
 	}
@@ -470,18 +470,18 @@ var pe = class {
 		return this._$AM._$AU;
 	}
 	_$AI(e) {
-		H(this, e);
+		V(this, e);
 	}
-}, ve = y.litHtmlPolyfillSupport;
-ve?.(V, U), (y.litHtmlVersions ??= []).push("3.3.3");
-var ye = (e, t, n) => {
+}, ye = y.litHtmlPolyfillSupport;
+ye?.(B, H), (y.litHtmlVersions ??= []).push("3.3.3");
+var be = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
 		let e = n?.renderBefore ?? null;
-		r._$litPart$ = i = new U(t.insertBefore(E(), e), e, void 0, n ?? {});
+		r._$litPart$ = i = new H(t.insertBefore(E(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, G = globalThis, K = class extends v {
+}, W = globalThis, G = class extends v {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -491,7 +491,7 @@ var ye = (e, t, n) => {
 	}
 	update(e) {
 		let t = this.render();
-		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = ye(t, this.renderRoot, this.renderOptions);
+		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = be(t, this.renderRoot, this.renderOptions);
 	}
 	connectedCallback() {
 		super.connectedCallback(), this._$Do?.setConnected(!0);
@@ -500,25 +500,25 @@ var ye = (e, t, n) => {
 		super.disconnectedCallback(), this._$Do?.setConnected(!1);
 	}
 	render() {
-		return I;
+		return F;
 	}
 };
-K._$litElement$ = !0, K.finalized = !0, G.litElementHydrateSupport?.({ LitElement: K });
-var be = G.litElementPolyfillSupport;
-be?.({ LitElement: K }), (G.litElementVersions ??= []).push("4.2.2");
+G._$litElement$ = !0, G.finalized = !0, W.litElementHydrateSupport?.({ LitElement: G });
+var xe = W.litElementPolyfillSupport;
+xe?.({ LitElement: G }), (W.litElementVersions ??= []).push("4.2.2");
 //#endregion
 //#region node_modules/@lit/reactive-element/decorators/custom-element.js
-var xe = (e) => (t, n) => {
+var Se = (e) => (t, n) => {
 	n === void 0 ? customElements.define(e, t) : n.addInitializer(() => {
 		customElements.define(e, t);
 	});
-}, Se = {
+}, Ce = {
 	attribute: !0,
 	type: String,
 	converter: h,
 	reflect: !1,
 	hasChanged: g
-}, Ce = (e = Se, t, n) => {
+}, we = (e = Ce, t, n) => {
 	let { kind: r, metadata: i } = n, a = globalThis.litPropertyMetadata.get(i);
 	if (a === void 0 && globalThis.litPropertyMetadata.set(i, a = /* @__PURE__ */ new Map()), r === "setter" && ((e = Object.create(e)).wrapped = !0), a.set(n.name, e), r === "accessor") {
 		let { name: r } = n;
@@ -541,16 +541,16 @@ var xe = (e) => (t, n) => {
 	}
 	throw Error("Unsupported decorator location: " + r);
 };
-function q(e) {
-	return (t, n) => typeof n == "object" ? Ce(e, t, n) : ((e, t, n) => {
+function K(e) {
+	return (t, n) => typeof n == "object" ? we(e, t, n) : ((e, t, n) => {
 		let r = t.hasOwnProperty(n);
 		return t.constructor.createProperty(n, e), r ? Object.getOwnPropertyDescriptor(t, n) : void 0;
 	})(e, t, n);
 }
 //#endregion
 //#region node_modules/@lit/reactive-element/decorators/state.js
-function J(e) {
-	return q({
+function q(e) {
+	return K({
 		...e,
 		state: !0,
 		attribute: !1
@@ -558,43 +558,52 @@ function J(e) {
 }
 //#endregion
 //#region src/energy.ts
-function Y(e) {
+function J(e) {
 	return typeof e == "object" && !!e;
 }
-function X(e, t) {
+function Y(e, t) {
 	let n = e[t];
 	return typeof n == "string" && n.length > 0 ? n : void 0;
 }
-function Z(e, t, n) {
+function X(e, t, n, r) {
 	if (!t) return;
-	let r = e.find((e) => e.entityId === t);
-	r ? r.multiplier += n : e.push({
+	let i = e.find((e) => e.entityId === t && e.role === r);
+	i ? i.multiplier += n : e.push({
 		entityId: t,
-		multiplier: n
+		multiplier: n,
+		role: r
 	});
 }
-function we(e, t) {
-	let n = X(t, "stat_rate"), r = X(t, "stat_rate_inverted");
-	if (n || r) {
-		Z(e, n, 1), Z(e, r, -1);
+function Te(e, t, n) {
+	let r = Y(t, "stat_rate"), i = Y(t, "stat_rate_inverted");
+	if (r || i) {
+		X(e, r, 1, n.net), X(e, i, -1, n.net);
 		return;
 	}
-	Z(e, X(t, "stat_rate_from"), 1), Z(e, X(t, "stat_rate_to"), -1);
+	X(e, Y(t, "stat_rate_from"), 1, n.positive), X(e, Y(t, "stat_rate_to"), -1, n.negative);
 }
-function Te(e) {
+function Ee(e) {
 	let t = [];
 	for (let n of e.energy_sources ?? []) {
-		if (!Y(n)) continue;
-		let e = X(n, "type"), r = Y(n.power_config) ? n.power_config : n;
-		if (e === "solar") Z(t, X(n, "stat_rate"), 1);
+		if (!J(n)) continue;
+		let e = Y(n, "type"), r = J(n.power_config) ? n.power_config : n;
+		if (e === "solar") X(t, Y(n, "stat_rate"), 1, "solar");
 		else if (e === "grid") {
-			let e = X(n, "stat_rate");
-			e ? Z(t, e, 1) : we(t, r);
-		} else e === "battery" && we(t, r);
+			let e = Y(n, "stat_rate");
+			e ? X(t, e, 1, "grid") : Te(t, r, {
+				net: "grid",
+				positive: "grid_import",
+				negative: "grid_export"
+			});
+		} else e === "battery" && Te(t, r, {
+			net: "battery",
+			positive: "battery_discharge",
+			negative: "battery_charge"
+		});
 	}
 	return t.filter((e) => e.multiplier !== 0);
 }
-function Ee(e) {
+function Z(e) {
 	if (!e) return null;
 	let t = Number(e.state);
 	if (!Number.isFinite(t)) return null;
@@ -604,10 +613,41 @@ function Ee(e) {
 function De(e, t) {
 	let n = 0, r = 0;
 	for (let i of t) {
-		let t = Ee(e[i.entityId]);
+		let t = Z(e[i.entityId]);
 		t !== null && (n += t * i.multiplier, r += 1);
 	}
 	return r > 0 ? Math.max(0, n) : null;
+}
+function Oe(e, t) {
+	let n = {
+		solar: 0,
+		gridImport: 0,
+		gridExport: 0,
+		batteryCharge: 0,
+		batteryDischarge: 0,
+		homeLoad: 0,
+		activeChannels: 0
+	};
+	for (let r of t) {
+		let t = Z(e[r.entityId]);
+		if (t === null) continue;
+		let i = t * r.multiplier;
+		n.activeChannels += 1, r.role === "solar" ? n.solar += Math.max(0, i) : r.role === "grid" || r.role === "grid_import" ? i >= 0 ? n.gridImport += i : n.gridExport += Math.abs(i) : r.role === "grid_export" ? i <= 0 ? n.gridExport += Math.abs(i) : n.gridImport += i : r.role === "battery" || r.role === "battery_discharge" ? i >= 0 ? n.batteryDischarge += i : n.batteryCharge += Math.abs(i) : r.role === "battery_charge" && (i <= 0 ? n.batteryCharge += Math.abs(i) : n.batteryDischarge += i);
+	}
+	return n.activeChannels === 0 ? null : (n.homeLoad = Math.max(0, n.solar + n.gridImport + n.batteryDischarge - n.gridExport - n.batteryCharge), n);
+}
+function ke(e) {
+	return Math.round(Math.min(100, Math.max(0, e * 100)));
+}
+function Ae(e) {
+	let t = e.gridImport - e.gridExport, n = e.batteryDischarge - e.batteryCharge, r = e.homeLoad > 0 ? ke((e.homeLoad - e.gridImport) / e.homeLoad) : 100, i = e.solar > 0 ? ke((e.solar - e.gridExport) / e.solar) : 0, a = "Waiting for enough live energy data.";
+	return e.gridExport > 250 ? a = "Solar surplus now: run flexible loads or charge storage." : e.gridImport > 500 && e.solar > 0 ? a = "Importing from grid: shift flexible loads toward brighter periods." : e.batteryCharge > 250 ? a = "Battery is charging: preserve stored energy for the evening peak." : e.batteryDischarge > 250 ? a = "Battery is covering demand: keep heavy loads staggered." : e.solar > 0 && (a = "Solar is covering the home with minimal grid movement."), {
+		selfPoweredPercent: r,
+		solarUsedPercent: i,
+		netGridWatts: t,
+		netBatteryWatts: n,
+		recommendation: a
+	};
 }
 //#endregion
 //#region \0@oxc-project+runtime@0.139.0/helpers/esm/decorate.js
@@ -619,7 +659,7 @@ function Q(e, t, n, r) {
 }
 //#endregion
 //#region src/power-orb-card.ts
-var Oe = 300 * 1e3, $ = class extends K {
+var je = 300 * 1e3, $ = class extends G {
 	constructor(...e) {
 		super(...e), this.channels = [], this.loading = !0, this.samples = [], this.config = { type: "custom:power-orb" }, this.connectionGeneration = 0, this.lastSampleAt = 0;
 	}
@@ -634,7 +674,8 @@ var Oe = 300 * 1e3, $ = class extends K {
 		if (e.max_power !== void 0 && e.max_power <= 0) throw Error("max_power must be greater than zero");
 		this.config = e, this.channels = e.entity ? [{
 			entityId: e.entity,
-			multiplier: 1
+			multiplier: 1,
+			role: "grid"
 		}] : [], this.loading = !e.entity, this.error = void 0, this.samples = [], this.disconnectData(), this.isConnected && this._hass && this.connect();
 	}
 	static getStubConfig() {
@@ -667,7 +708,7 @@ var Oe = 300 * 1e3, $ = class extends K {
 	}
 	async startDiscovery(e) {
 		if (await this.loadEnergyPreferences(), !(e !== this.connectionGeneration || !this._hass)) {
-			this.refreshTimer = window.setInterval(() => void this.loadEnergyPreferences(), Oe);
+			this.refreshTimer = window.setInterval(() => void this.loadEnergyPreferences(), je);
 			try {
 				let t = await this._hass.connection.subscribeEvents(() => void this.loadEnergyPreferences(), "power_orb_refresh");
 				e === this.connectionGeneration ? this.unsubscribe = t : t();
@@ -682,7 +723,7 @@ var Oe = 300 * 1e3, $ = class extends K {
 			this.loading = !0;
 			try {
 				let e = await this._hass.callWS({ type: "energy/get_prefs" });
-				this.channels = Te(e), this.error = this.channels.length === 0 ? "Add real-time power sensors to your Energy dashboard." : void 0, this.captureSample(!0);
+				this.channels = Ee(e), this.error = this.channels.length === 0 ? "Add real-time power sensors to your Energy dashboard." : void 0, this.captureSample(!0);
 			} catch {
 				this.error = "Power Orb could not read the Energy dashboard.";
 			} finally {
@@ -691,7 +732,10 @@ var Oe = 300 * 1e3, $ = class extends K {
 		}
 	}
 	currentPower() {
-		return this._hass ? this.config.entity ? Ee(this._hass.states[this.config.entity]) : De(this._hass.states, this.channels) : null;
+		return this._hass ? this.config.entity ? Z(this._hass.states[this.config.entity]) : De(this._hass.states, this.channels) : null;
+	}
+	currentSnapshot() {
+		return !this._hass || this.config.entity ? null : Oe(this._hass.states, this.channels);
 	}
 	captureSample(e = !1) {
 		let t = Date.now();
@@ -707,9 +751,9 @@ var Oe = 300 * 1e3, $ = class extends K {
 		};
 	}
 	sparkline() {
-		if (this.samples.length < 2) return L;
+		if (this.samples.length < 2) return I;
 		let e = Math.max(...this.samples, 1), t = Math.max(this.samples.length - 1, 1);
-		return de`
+		return fe`
       <svg class="sparkline" viewBox="0 0 100 42" preserveAspectRatio="none"
         role="img" aria-label="Recent power trend">
         <polyline points=${this.samples.map((n, r) => {
@@ -719,9 +763,22 @@ var Oe = 300 * 1e3, $ = class extends K {
       </svg>
     `;
 	}
+	flowStyle(e, t) {
+		return `--flow:${t > 0 ? Math.min(1, Math.max(0, e / t)) : 0}`;
+	}
+	metric(e, t, n) {
+		let r = this.formatPower(t);
+		return P`
+      <div class=${`metric ${t > 0 ? "active" : ""}`}>
+        <span>${e}</span>
+        <strong>${r.value}<small>${r.unit}</small></strong>
+        <em>${n}</em>
+      </div>
+    `;
+	}
 	render() {
-		let e = this.currentPower(), t = this.config.max_power ?? Math.max(...this.samples, e ?? 0, 5e3), n = e === null ? 0 : Math.min(1, Math.max(.08, e / t)), r = e === null ? void 0 : this.formatPower(e);
-		return F`
+		let e = this.currentPower(), t = this.config.max_power ?? Math.max(...this.samples, e ?? 0, 5e3), n = e === null ? 0 : Math.min(1, Math.max(.08, e / t)), r = e === null ? void 0 : this.formatPower(e), i = this.currentSnapshot(), a = i ? Ae(i) : void 0, o = a?.netGridWatts ?? 0, s = a?.netBatteryWatts ?? 0;
+		return P`
       <ha-card>
         <div class="card" style=${`--intensity:${n}`}>
           <header>
@@ -731,22 +788,80 @@ var Oe = 300 * 1e3, $ = class extends K {
             </span>
           </header>
 
-          <div class="visual">
-            <div class="orb" aria-hidden="true">
-              <div class="core"></div>
-              <div class="ring ring-one"></div>
-              <div class="ring ring-two"></div>
+          ${i ? P`
+                <section class="dashboard" aria-label="Live energy dashboard">
+                  <div class="sky" aria-hidden="true">
+                    <div class="sun"></div>
+                    <svg class="arc" viewBox="0 0 260 100" preserveAspectRatio="none">
+                      <path d="M12 88 C 70 8, 188 8, 248 88"></path>
+                    </svg>
+                  </div>
+
+                  <div class="flow flow-solar ${i.solar > 0 ? "active" : ""}" style=${this.flowStyle(i.solar, t)}></div>
+                  <div class="flow flow-grid ${o === 0 ? "" : "active"}" style=${this.flowStyle(Math.abs(o), t)}></div>
+                  <div class="flow flow-battery ${s === 0 ? "" : "active"}" style=${this.flowStyle(Math.abs(s), t)}></div>
+
+                  <div class="node solar-node">
+                    <span>Solar</span>
+                    <strong>${this.formatPower(i.solar).value}<small>${this.formatPower(i.solar).unit}</small></strong>
+                  </div>
+                  <div class="node home-node">
+                    <span>Home</span>
+                    <strong>${this.formatPower(i.homeLoad).value}<small>${this.formatPower(i.homeLoad).unit}</small></strong>
+                  </div>
+                  <div class="node grid-node">
+                    <span>Grid</span>
+                    <strong>${this.formatPower(Math.abs(o)).value}<small>${this.formatPower(Math.abs(o)).unit}</small></strong>
+                  </div>
+                  <div class="node battery-node">
+                    <span>Battery</span>
+                    <strong>${this.formatPower(Math.abs(s)).value}<small>${this.formatPower(Math.abs(s)).unit}</small></strong>
+                  </div>
+                </section>
+
+                <section class="metrics" aria-label="Energy source details">
+                  ${this.metric("Solar", i.solar, "production")}
+                  ${this.metric("Grid", Math.abs(o), o < 0 ? "exporting" : o > 0 ? "importing" : "idle")}
+                  ${this.metric("Battery", Math.abs(s), s < 0 ? "charging" : s > 0 ? "discharging" : "idle")}
+                  ${this.metric("Home", i.homeLoad, "estimated load")}
+                </section>
+
+                <section class="insights" aria-label="Automatic energy insights">
+                  <div>
+                    <span>Self powered</span>
+                    <strong>${a?.selfPoweredPercent ?? 0}<small>%</small></strong>
+                  </div>
+                  <div>
+                    <span>Solar used</span>
+                    <strong>${a?.solarUsedPercent ?? 0}<small>%</small></strong>
+                  </div>
+                  <p>${a?.recommendation}</p>
+                </section>
+              ` : P`
+                <div class="visual">
+                  <div class="orb" aria-hidden="true">
+                    <div class="core"></div>
+                    <div class="ring ring-one"></div>
+                    <div class="ring ring-two"></div>
+                  </div>
+                  <div class="reading" aria-live="polite">
+                    ${r ? P`<strong>${r.value}</strong
+                          ><span>${r.unit}</span>` : P`<strong>—</strong>`}
+                    <small>live power</small>
+                  </div>
+                </div>
+              `}
+
+          <div class="trend">
+            <div class="trend-label">
+              <span>Recent load</span>
+              ${r ? P`<strong>${r.value}<small>${r.unit}</small></strong>` : I}
             </div>
-            <div class="reading" aria-live="polite">
-              ${r ? F`<strong>${r.value}</strong
-                    ><span>${r.unit}</span>` : F`<strong>—</strong>`}
-              <small>home power</small>
-            </div>
+            ${this.sparkline()}
           </div>
 
-          ${this.sparkline()}
-          ${this.loading ? F`<p class="message">Discovering Energy dashboard…</p>` : this.error ? F`<p class="message error">${this.error}</p>` : F`<p class="message">
-                  ${this.config.entity ? this.config.entity : `${this.channels.length} live ${this.channels.length === 1 ? "sensor" : "sensors"}`}
+          ${this.loading ? P`<p class="message">Discovering Energy dashboard…</p>` : this.error ? P`<p class="message error">${this.error}</p>` : P`<p class="message">
+                  ${this.config.entity ? this.config.entity : `${this.channels.length} Energy dashboard ${this.channels.length === 1 ? "sensor" : "sensors"} mapped automatically`}
                 </p>`}
         </div>
       </ha-card>
@@ -765,7 +880,7 @@ var Oe = 300 * 1e3, $ = class extends K {
       color: var(--primary-text-color, #f4fbff);
     }
     .card {
-      min-height: 320px;
+      min-height: 430px;
       padding: 20px;
       position: relative;
       box-sizing: border-box;
@@ -875,6 +990,219 @@ var Oe = 300 * 1e3, $ = class extends K {
       stroke-width: 1.5;
       vector-effect: non-scaling-stroke;
     }
+    .dashboard {
+      position: relative;
+      min-height: 230px;
+      margin: 18px 0 14px;
+      border-radius: 18px;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(24, 91, 120, 0.34), transparent 54%),
+        linear-gradient(180deg, transparent 58%, rgba(38, 83, 48, 0.28) 59%, rgba(25, 43, 32, 0.58));
+      box-shadow: inset 0 0 0 1px rgba(180, 231, 232, 0.12);
+    }
+    .sky {
+      position: absolute;
+      inset: 12px 16px auto;
+      height: 88px;
+      opacity: 0.95;
+    }
+    .sun {
+      position: absolute;
+      left: 50%;
+      top: 4px;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #ffd978;
+      box-shadow: 0 0 34px rgba(255, 207, 94, 0.76);
+      transform: translateX(-50%);
+    }
+    .arc {
+      position: absolute;
+      inset: 10px 0 0;
+      width: 100%;
+      height: 82px;
+    }
+    .arc path {
+      fill: none;
+      stroke: rgba(255, 238, 188, 0.5);
+      stroke-width: 1.4;
+      stroke-dasharray: 4 6;
+    }
+    .flow {
+      position: absolute;
+      background: rgba(113, 234, 220, calc(0.22 + 0.58 * var(--flow)));
+      border-radius: 999px;
+      box-shadow: 0 0 calc(8px + 18px * var(--flow)) rgba(76, 229, 220, calc(0.12 + 0.5 * var(--flow)));
+      opacity: 0.36;
+      transform-origin: center;
+      transition: opacity 0.5s ease, box-shadow 0.5s ease;
+    }
+    .flow.active {
+      opacity: 1;
+    }
+    .flow::after {
+      content: "";
+      position: absolute;
+      inset: -2px auto -2px 0;
+      width: 28%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.86), transparent);
+      animation: flow 2.3s linear infinite;
+    }
+    .flow-solar {
+      left: 49%;
+      top: 84px;
+      width: 5px;
+      height: 66px;
+    }
+    .flow-solar::after {
+      width: 100%;
+      height: 24px;
+      animation-name: flow-down;
+    }
+    .flow-grid {
+      left: 62%;
+      top: 154px;
+      width: 23%;
+      height: calc(2px + 5px * var(--flow));
+    }
+    .flow-battery {
+      left: 17%;
+      top: 154px;
+      width: 23%;
+      height: calc(2px + 5px * var(--flow));
+    }
+    .node {
+      position: absolute;
+      display: grid;
+      place-items: center;
+      width: 88px;
+      min-height: 58px;
+      padding: 8px;
+      box-sizing: border-box;
+      border-radius: 14px;
+      background: rgba(7, 22, 30, 0.72);
+      border: 1px solid rgba(175, 239, 235, 0.18);
+      box-shadow: 0 14px 26px rgba(0, 0, 0, 0.18);
+      text-align: center;
+    }
+    .node span,
+    .metric span,
+    .trend-label span {
+      color: var(--secondary-text-color, #aab8c2);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .node strong,
+    .metric strong,
+    .trend-label strong {
+      font-size: 18px;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+    .node small,
+    .metric small,
+    .trend-label small {
+      margin-left: 3px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .solar-node {
+      left: 50%;
+      top: 62px;
+      transform: translateX(-50%);
+    }
+    .home-node {
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%);
+      background: rgba(6, 35, 43, 0.9);
+      border-color: rgba(102, 235, 226, 0.38);
+    }
+    .grid-node {
+      right: 16px;
+      bottom: 22px;
+    }
+    .battery-node {
+      left: 16px;
+      bottom: 22px;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .metric {
+      min-width: 0;
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.045);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+    }
+    .metric.active {
+      background: rgba(61, 211, 198, 0.1);
+    }
+    .metric strong {
+      display: block;
+      margin-top: 7px;
+    }
+    .metric em {
+      display: block;
+      margin-top: 3px;
+      color: var(--secondary-text-color, #aab8c2);
+      font-size: 11px;
+      font-style: normal;
+    }
+    .trend {
+      margin-top: 12px;
+    }
+    .insights {
+      display: grid;
+      grid-template-columns: minmax(78px, 0.45fr) minmax(78px, 0.45fr) minmax(0, 1.3fr);
+      gap: 8px;
+      margin-top: 8px;
+      align-items: stretch;
+    }
+    .insights div,
+    .insights p {
+      margin: 0;
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.055);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+    }
+    .insights span {
+      display: block;
+      color: var(--secondary-text-color, #aab8c2);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .insights strong {
+      display: block;
+      margin-top: 5px;
+      font-size: 22px;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .insights small {
+      margin-left: 2px;
+      font-size: 11px;
+    }
+    .insights p {
+      color: var(--primary-text-color, #f4fbff);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .trend-label {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 3px;
+    }
     .message {
       min-height: 16px;
       margin: 8px 0 0;
@@ -891,16 +1219,36 @@ var Oe = 300 * 1e3, $ = class extends K {
     @keyframes orbit {
       to { transform: rotateY(67deg) rotateZ(338deg); }
     }
+    @keyframes flow {
+      to { transform: translateX(360%); }
+    }
+    @keyframes flow-down {
+      to { transform: translateY(280%); }
+    }
     @media (prefers-reduced-motion: reduce) {
-      .core, .ring-two { animation: none; }
+      .core, .ring-two, .flow::after { animation: none; }
+    }
+    @media (max-width: 420px) {
+      .metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .insights {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .insights p {
+        grid-column: 1 / -1;
+      }
+      .node {
+        width: 78px;
+      }
     }
   `;
 	}
 };
-Q([q({ attribute: !1 })], $.prototype, "hass", null), Q([J()], $.prototype, "channels", void 0), Q([J()], $.prototype, "loading", void 0), Q([J()], $.prototype, "error", void 0), Q([J()], $.prototype, "samples", void 0), $ = Q([xe("power-orb")], $), window.customCards = window.customCards ?? [], window.customCards.some((e) => e.type === "power-orb") || window.customCards.push({
+Q([K({ attribute: !1 })], $.prototype, "hass", null), Q([q()], $.prototype, "channels", void 0), Q([q()], $.prototype, "loading", void 0), Q([q()], $.prototype, "error", void 0), Q([q()], $.prototype, "samples", void 0), $ = Q([Se("power-orb")], $), window.customCards = window.customCards ?? [], window.customCards.some((e) => e.type === "power-orb") || window.customCards.push({
 	type: "power-orb",
 	name: "Power Orb",
-	description: "Live home power from the Home Assistant Energy dashboard",
+	description: "Live solar, grid, battery, and home power from the Energy dashboard",
 	documentationURL: "https://github.com/ITSpecialist111/PowerOrb",
 	preview: !0
 });

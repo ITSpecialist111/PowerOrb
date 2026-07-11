@@ -16,9 +16,12 @@ runs inside Home Assistant and uses its authenticated frontend API.
 ## Features
 
 - Automatically discovers solar, grid, and battery power sensors
+- Shows a live solar, grid, battery, and home-load dashboard from that discovery
+- Derives self-powered percentage, solar-use percentage, and net flow direction
+- Gives a plain-language live recommendation for surplus, import, and battery states
 - Reacts when Energy dashboard preferences change
 - Supports W, kW, and MW source sensors
-- Animated, responsive orb with a rolling live trend
+- Animated, responsive flow scene with a rolling live trend
 - Works offline after installation; no CDN resources
 - Honors reduced-motion accessibility preferences
 - Optional direct power entity for installations without Energy configuration

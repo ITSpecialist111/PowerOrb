@@ -34,7 +34,35 @@ export interface EnergyPreferences {
   energy_sources?: unknown[];
 }
 
+export type PowerChannelRole =
+  | "solar"
+  | "grid"
+  | "grid_import"
+  | "grid_export"
+  | "battery"
+  | "battery_charge"
+  | "battery_discharge";
+
 export interface PowerChannel {
   entityId: string;
   multiplier: number;
+  role: PowerChannelRole;
+}
+
+export interface PowerSnapshot {
+  solar: number;
+  gridImport: number;
+  gridExport: number;
+  batteryCharge: number;
+  batteryDischarge: number;
+  homeLoad: number;
+  activeChannels: number;
+}
+
+export interface PowerInsights {
+  selfPoweredPercent: number;
+  solarUsedPercent: number;
+  netGridWatts: number;
+  netBatteryWatts: number;
+  recommendation: string;
 }
