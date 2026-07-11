@@ -4,6 +4,10 @@ Power Orb is a real-time energy visualization card for Home Assistant 2026. It
 uses the power sensors already configured in Home Assistant's Energy dashboard,
 so it needs no server, access token, or duplicate entity configuration.
 
+Power Orb is compatible with Home Assistant 2026.7. The 2026.7 frontend keeps
+the custom-card APIs and `energy/get_prefs` WebSocket command used by this card.
+The component-size changes in that release do not affect Power Orb.
+
 The original Supervisor add-on has been replaced by a Lovelace custom card. The
 old add-on attempted to open Home Assistant's authenticated WebSocket from an
 Ingress page without a token and could not receive state updates. Power Orb now
@@ -33,10 +37,14 @@ runs inside Home Assistant and uses its authenticated frontend API.
 type: custom:power-orb
 ```
 
+HACS installs the compiled `dist/power-orb.js` artifact. That artifact is kept
+in the repository intentionally so both the default branch and tagged releases
+are valid HACS Dashboard sources.
+
 ### Manual
 
-1. Download `power-orb.js` from the latest release into
-   `/config/www/power-orb/`.
+1. Download `dist/power-orb.js` from this repository, or the `power-orb.js`
+   asset from a tagged release, into `/config/www/power-orb/`.
 2. Add `/local/power-orb/power-orb.js` as a JavaScript module under
    **Settings → Dashboards → Resources**.
 3. Add the card using the YAML above.
@@ -91,9 +99,17 @@ Requires Node.js 22 or newer.
 
 ```bash
 npm install
-npm run typecheck
-npm test
-npm run build
+npm run check
 ```
 
-The HACS artifact is generated at `dist/power-orb.js`.
+The HACS artifacts are generated in `dist/` and must be committed whenever the
+source changes. CI rebuilds them and fails if the committed output is stale.
+
+## HACS troubleshooting
+
+If HACS previously reported
+`<Plugin ITSpecialist111/PowerOrb> Repository structure for main is not compliant`,
+refresh HACS and retry adding the custom **Dashboard** repository after updating
+to a commit that contains `dist/power-orb.js`. The old error means HACS inspected
+a revision that did not contain the compiled JavaScript file; it is not a Home
+Assistant 2026.7 dashboard API error.

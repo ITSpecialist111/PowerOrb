@@ -50,6 +50,14 @@ describe("discoverPowerChannels", () => {
     ).toEqual([{ entityId: "sensor.net_grid", multiplier: 1 }]);
   });
 
+  it("reads a normalized battery rate defined on the energy source", () => {
+    expect(
+      discoverPowerChannels({
+        energy_sources: [{ type: "battery", stat_rate: "sensor.battery_power" }],
+      }),
+    ).toEqual([{ entityId: "sensor.battery_power", multiplier: 1 }]);
+  });
+
   it("does not double count directional sensors when a net sensor exists", () => {
     expect(
       discoverPowerChannels({

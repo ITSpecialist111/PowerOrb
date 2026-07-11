@@ -1,0 +1,44 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7.0.0
+      - uses: actions/setup-node@v6.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - name: Verify committed HACS artifacts
+        shell: bash
+        run: |
+          if [[ -n "$(git status --porcelain -- dist)" ]]; then
+            echo "dist/ is missing or stale. Run 'npm run build' and commit the result."
+            git status --short -- dist
+            exit 1
+          fi
+
+  hacs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate HACS Dashboard repository
+        uses: hacs/action@main
+        with:
+          category: plugin
+          comment: "false"
+          # These checks use GitHub repository settings and README artwork;
+          # they do not affect custom Dashboard repository installation.
+          ignore: "description topics images license"

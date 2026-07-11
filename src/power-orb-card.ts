@@ -64,7 +64,21 @@ export class PowerOrbCard extends LitElement {
   }
 
   public getCardSize(): number {
-    return 4;
+    return 7;
+  }
+
+  public getGridOptions(): {
+    rows: number;
+    columns: number;
+    min_rows: number;
+    min_columns: number;
+  } {
+    return {
+      rows: 6,
+      columns: 6,
+      min_rows: 6,
+      min_columns: 3,
+    };
   }
 
   public connectedCallback(): void {
@@ -396,6 +410,7 @@ if (!window.customCards.some((card) => card.type === "power-orb")) {
     type: "power-orb",
     name: "Power Orb",
     description: "Live home power from the Home Assistant Energy dashboard",
+    documentationURL: "https://github.com/ITSpecialist111/PowerOrb",
     preview: true,
   });
 }
