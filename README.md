@@ -15,10 +15,12 @@ runs inside Home Assistant and uses its authenticated frontend API.
 
 ## Features
 
-- Automatically discovers solar, grid, and battery power sensors
+- Automatically discovers and visualizes solar, grid, battery, and home power
+- Directional live flows distinguish grid import/export and battery charge/discharge
+- Dark mineral-glass interface with a distinct color and reading for every source
 - Reacts when Energy dashboard preferences change
 - Supports W, kW, and MW source sensors
-- Animated, responsive orb with a rolling live trend
+- Animated, responsive dark-glass orb with a rolling 60-second demand trace
 - Works offline after installation; no CDN resources
 - Honors reduced-motion accessibility preferences
 - Optional direct power entity for installations without Energy configuration
@@ -71,7 +73,10 @@ unit: kW
 For automatic discovery, configure real-time power sensors in
 **Settings → Dashboards → Energy**. Cumulative kWh meters are intentionally not
 converted into live power because that produces inaccurate values between
-meter updates.
+meter updates. Power Orb groups every configured live source by role: solar
+generation, grid import or export, battery supply or charging, and the resulting
+home demand. Flow direction and animation speed reflect each source's current
+direction and magnitude.
 
 ## HASS MCP OpenClaw
 

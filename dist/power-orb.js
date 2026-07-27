@@ -254,34 +254,34 @@ var v = class extends HTMLElement {
 v.elementStyles = [], v.shadowRootOptions = { mode: "open" }, v[m("elementProperties")] = /* @__PURE__ */ new Map(), v[m("finalized")] = /* @__PURE__ */ new Map(), ie?.({ ReactiveElement: v }), (f.reactiveElementVersions ??= []).push("2.1.2");
 //#endregion
 //#region node_modules/lit-html/lit-html.js
-var y = globalThis, b = (e) => e, x = y.trustedTypes, ae = x ? x.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, S = "$lit$", C = `lit$${Math.random().toFixed(9).slice(2)}$`, w = "?" + C, oe = `<${w}>`, T = document, E = () => T.createComment(""), D = (e) => e === null || typeof e != "object" && typeof e != "function", O = Array.isArray, se = (e) => O(e) || typeof e?.[Symbol.iterator] == "function", k = "[ 	\n\f\r]", A = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ce = /-->/g, j = />/g, M = RegExp(`>|${k}(?:([^\\s"'>=/]+)(${k}*=${k}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), le = /'/g, ue = /"/g, N = /^(?:script|style|textarea|title)$/i, P = (e) => (t, ...n) => ({
+var y = globalThis, ae = (e) => e, b = y.trustedTypes, x = b ? b.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, S = "$lit$", C = `lit$${Math.random().toFixed(9).slice(2)}$`, w = "?" + C, oe = `<${w}>`, T = document, E = () => T.createComment(""), D = (e) => e === null || typeof e != "object" && typeof e != "function", O = Array.isArray, se = (e) => O(e) || typeof e?.[Symbol.iterator] == "function", k = "[ 	\n\f\r]", A = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ce = /-->/g, le = />/g, j = RegExp(`>|${k}(?:([^\\s"'>=/]+)(${k}*=${k}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), ue = /'/g, de = /"/g, fe = /^(?:script|style|textarea|title)$/i, M = (e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
-}), F = P(1), de = P(2), I = Symbol.for("lit-noChange"), L = Symbol.for("lit-nothing"), R = /* @__PURE__ */ new WeakMap(), z = T.createTreeWalker(T, 129);
-function B(e, t) {
+}), N = M(1), P = M(2), F = Symbol.for("lit-noChange"), I = Symbol.for("lit-nothing"), L = /* @__PURE__ */ new WeakMap(), R = T.createTreeWalker(T, 129);
+function z(e, t) {
 	if (!O(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
-	return ae === void 0 ? t : ae.createHTML(t);
+	return x === void 0 ? t : x.createHTML(t);
 }
-var fe = (e, t) => {
+var pe = (e, t) => {
 	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = A;
 	for (let t = 0; t < n; t++) {
 		let n = e[t], s, c, l = -1, u = 0;
-		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === A ? c[1] === "!--" ? o = ce : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = M) : (N.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = M) : o = j : o === M ? c[0] === ">" ? (o = i ?? A, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? M : c[3] === "\"" ? ue : le) : o === ue || o === le ? o = M : o === ce || o === j ? o = A : (o = M, i = void 0);
-		let d = o === M && e[t + 1].startsWith("/>") ? " " : "";
+		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === A ? c[1] === "!--" ? o = ce : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = j) : (fe.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = j) : o = le : o === j ? c[0] === ">" ? (o = i ?? A, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? j : c[3] === "\"" ? de : ue) : o === de || o === ue ? o = j : o === ce || o === le ? o = A : (o = j, i = void 0);
+		let d = o === j && e[t + 1].startsWith("/>") ? " " : "";
 		a += o === A ? n + oe : l >= 0 ? (r.push(s), n.slice(0, l) + S + n.slice(l) + C + d) : n + C + (l === -2 ? t : d);
 	}
-	return [B(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
-}, V = class e {
+	return [z(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
+}, B = class e {
 	constructor({ strings: t, _$litType$: n }, r) {
 		let i;
 		this.parts = [];
-		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = fe(t, n);
-		if (this.el = e.createElement(l, r), z.currentNode = this.el.content, n === 2 || n === 3) {
+		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = pe(t, n);
+		if (this.el = e.createElement(l, r), R.currentNode = this.el.content, n === 2 || n === 3) {
 			let e = this.el.content.firstChild;
 			e.replaceWith(...e.childNodes);
 		}
-		for (; (i = z.nextNode()) !== null && c.length < s;) {
+		for (; (i = R.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
 				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(S)) {
 					let t = u[o++], n = i.getAttribute(e).split(C), r = /([.?@])?(.*)/.exec(t);
@@ -290,17 +290,17 @@ var fe = (e, t) => {
 						index: a,
 						name: r[2],
 						strings: n,
-						ctor: r[1] === "." ? me : r[1] === "?" ? he : r[1] === "@" ? ge : W
+						ctor: r[1] === "." ? he : r[1] === "?" ? ge : r[1] === "@" ? _e : U
 					}), i.removeAttribute(e);
 				} else e.startsWith(C) && (c.push({
 					type: 6,
 					index: a
 				}), i.removeAttribute(e));
-				if (N.test(i.tagName)) {
+				if (fe.test(i.tagName)) {
 					let e = i.textContent.split(C), t = e.length - 1;
 					if (t > 0) {
-						i.textContent = x ? x.emptyScript : "";
-						for (let n = 0; n < t; n++) i.append(e[n], E()), z.nextNode(), c.push({
+						i.textContent = b ? b.emptyScript : "";
+						for (let n = 0; n < t; n++) i.append(e[n], E()), R.nextNode(), c.push({
 							type: 2,
 							index: ++a
 						});
@@ -326,12 +326,12 @@ var fe = (e, t) => {
 		return n.innerHTML = e, n;
 	}
 };
-function H(e, t, n = e, r) {
-	if (t === I) return t;
+function V(e, t, n = e, r) {
+	if (t === F) return t;
 	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = D(t) ? void 0 : t._$litDirective$;
-	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = H(e, i._$AS(e, t.values), i, r)), t;
+	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = V(e, i._$AS(e, t.values), i, r)), t;
 }
-var pe = class {
+var me = class {
 	constructor(e, t) {
 		this._$AV = [], this._$AN = void 0, this._$AD = e, this._$AM = t;
 	}
@@ -343,27 +343,27 @@ var pe = class {
 	}
 	u(e) {
 		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? T).importNode(t, !0);
-		z.currentNode = r;
-		let i = z.nextNode(), a = 0, o = 0, s = n[0];
+		R.currentNode = r;
+		let i = R.nextNode(), a = 0, o = 0, s = n[0];
 		for (; s !== void 0;) {
 			if (a === s.index) {
 				let t;
-				s.type === 2 ? t = new U(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new _e(i, this, e)), this._$AV.push(t), s = n[++o];
+				s.type === 2 ? t = new H(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new ve(i, this, e)), this._$AV.push(t), s = n[++o];
 			}
-			a !== s?.index && (i = z.nextNode(), a++);
+			a !== s?.index && (i = R.nextNode(), a++);
 		}
-		return z.currentNode = T, r;
+		return R.currentNode = T, r;
 	}
 	p(e) {
 		let t = 0;
 		for (let n of this._$AV) n !== void 0 && (n.strings === void 0 ? n._$AI(e[t]) : (n._$AI(e, n, t), t += n.strings.length - 2)), t++;
 	}
-}, U = class e {
+}, H = class e {
 	get _$AU() {
 		return this._$AM?._$AU ?? this._$Cv;
 	}
 	constructor(e, t, n, r) {
-		this.type = 2, this._$AH = L, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
+		this.type = 2, this._$AH = I, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
 	}
 	get parentNode() {
 		let e = this._$AA.parentNode, t = this._$AM;
@@ -376,7 +376,7 @@ var pe = class {
 		return this._$AB;
 	}
 	_$AI(e, t = this) {
-		e = H(this, e, t), D(e) ? e === L || e == null || e === "" ? (this._$AH !== L && this._$AR(), this._$AH = L) : e !== this._$AH && e !== I && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? se(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
+		e = V(this, e, t), D(e) ? e === I || e == null || e === "" ? (this._$AH !== I && this._$AR(), this._$AH = I) : e !== this._$AH && e !== F && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? se(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
 	}
 	O(e) {
 		return this._$AA.parentNode.insertBefore(e, this._$AB);
@@ -385,19 +385,19 @@ var pe = class {
 		this._$AH !== e && (this._$AR(), this._$AH = this.O(e));
 	}
 	_(e) {
-		this._$AH !== L && D(this._$AH) ? this._$AA.nextSibling.data = e : this.T(T.createTextNode(e)), this._$AH = e;
+		this._$AH !== I && D(this._$AH) ? this._$AA.nextSibling.data = e : this.T(T.createTextNode(e)), this._$AH = e;
 	}
 	$(e) {
-		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = V.createElement(B(n.h, n.h[0]), this.options)), n);
+		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = B.createElement(z(n.h, n.h[0]), this.options)), n);
 		if (this._$AH?._$AD === r) this._$AH.p(t);
 		else {
-			let e = new pe(r, this), n = e.u(this.options);
+			let e = new me(r, this), n = e.u(this.options);
 			e.p(t), this.T(n), this._$AH = e;
 		}
 	}
 	_$AC(e) {
-		let t = R.get(e.strings);
-		return t === void 0 && R.set(e.strings, t = new V(e)), t;
+		let t = L.get(e.strings);
+		return t === void 0 && L.set(e.strings, t = new B(e)), t;
 	}
 	k(t) {
 		O(this._$AH) || (this._$AH = [], this._$AR());
@@ -407,14 +407,14 @@ var pe = class {
 	}
 	_$AR(e = this._$AA.nextSibling, t) {
 		for (this._$AP?.(!1, !0, t); e !== this._$AB;) {
-			let t = b(e).nextSibling;
-			b(e).remove(), e = t;
+			let t = ae(e).nextSibling;
+			ae(e).remove(), e = t;
 		}
 	}
 	setConnected(e) {
 		this._$AM === void 0 && (this._$Cv = e, this._$AP?.(e));
 	}
-}, W = class {
+}, U = class {
 	get tagName() {
 		return this.element.tagName;
 	}
@@ -422,47 +422,47 @@ var pe = class {
 		return this._$AM._$AU;
 	}
 	constructor(e, t, n, r, i) {
-		this.type = 1, this._$AH = L, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = L;
+		this.type = 1, this._$AH = I, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = I;
 	}
 	_$AI(e, t = this, n, r) {
 		let i = this.strings, a = !1;
-		if (i === void 0) e = H(this, e, t, 0), a = !D(e) || e !== this._$AH && e !== I, a && (this._$AH = e);
+		if (i === void 0) e = V(this, e, t, 0), a = !D(e) || e !== this._$AH && e !== F, a && (this._$AH = e);
 		else {
 			let r = e, o, s;
-			for (e = i[0], o = 0; o < i.length - 1; o++) s = H(this, r[n + o], t, o), s === I && (s = this._$AH[o]), a ||= !D(s) || s !== this._$AH[o], s === L ? e = L : e !== L && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
+			for (e = i[0], o = 0; o < i.length - 1; o++) s = V(this, r[n + o], t, o), s === F && (s = this._$AH[o]), a ||= !D(s) || s !== this._$AH[o], s === I ? e = I : e !== I && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
 		}
 		a && !r && this.j(e);
 	}
 	j(e) {
-		e === L ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
+		e === I ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
 	}
-}, me = class extends W {
+}, he = class extends U {
 	constructor() {
 		super(...arguments), this.type = 3;
 	}
 	j(e) {
-		this.element[this.name] = e === L ? void 0 : e;
+		this.element[this.name] = e === I ? void 0 : e;
 	}
-}, he = class extends W {
+}, ge = class extends U {
 	constructor() {
 		super(...arguments), this.type = 4;
 	}
 	j(e) {
-		this.element.toggleAttribute(this.name, !!e && e !== L);
+		this.element.toggleAttribute(this.name, !!e && e !== I);
 	}
-}, ge = class extends W {
+}, _e = class extends U {
 	constructor(e, t, n, r, i) {
 		super(e, t, n, r, i), this.type = 5;
 	}
 	_$AI(e, t = this) {
-		if ((e = H(this, e, t, 0) ?? L) === I) return;
-		let n = this._$AH, r = e === L && n !== L || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== L && (n === L || r);
+		if ((e = V(this, e, t, 0) ?? I) === F) return;
+		let n = this._$AH, r = e === I && n !== I || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== I && (n === I || r);
 		r && this.element.removeEventListener(this.name, this, n), i && this.element.addEventListener(this.name, this, e), this._$AH = e;
 	}
 	handleEvent(e) {
 		typeof this._$AH == "function" ? this._$AH.call(this.options?.host ?? this.element, e) : this._$AH.handleEvent(e);
 	}
-}, _e = class {
+}, ve = class {
 	constructor(e, t, n) {
 		this.element = e, this.type = 6, this._$AN = void 0, this._$AM = t, this.options = n;
 	}
@@ -470,18 +470,18 @@ var pe = class {
 		return this._$AM._$AU;
 	}
 	_$AI(e) {
-		H(this, e);
+		V(this, e);
 	}
-}, ve = y.litHtmlPolyfillSupport;
-ve?.(V, U), (y.litHtmlVersions ??= []).push("3.3.3");
-var ye = (e, t, n) => {
+}, ye = y.litHtmlPolyfillSupport;
+ye?.(B, H), (y.litHtmlVersions ??= []).push("3.3.3");
+var be = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
 		let e = n?.renderBefore ?? null;
-		r._$litPart$ = i = new U(t.insertBefore(E(), e), e, void 0, n ?? {});
+		r._$litPart$ = i = new H(t.insertBefore(E(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, G = globalThis, K = class extends v {
+}, W = globalThis, G = class extends v {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -491,7 +491,7 @@ var ye = (e, t, n) => {
 	}
 	update(e) {
 		let t = this.render();
-		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = ye(t, this.renderRoot, this.renderOptions);
+		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = be(t, this.renderRoot, this.renderOptions);
 	}
 	connectedCallback() {
 		super.connectedCallback(), this._$Do?.setConnected(!0);
@@ -500,25 +500,25 @@ var ye = (e, t, n) => {
 		super.disconnectedCallback(), this._$Do?.setConnected(!1);
 	}
 	render() {
-		return I;
+		return F;
 	}
 };
-K._$litElement$ = !0, K.finalized = !0, G.litElementHydrateSupport?.({ LitElement: K });
-var be = G.litElementPolyfillSupport;
-be?.({ LitElement: K }), (G.litElementVersions ??= []).push("4.2.2");
+G._$litElement$ = !0, G.finalized = !0, W.litElementHydrateSupport?.({ LitElement: G });
+var xe = W.litElementPolyfillSupport;
+xe?.({ LitElement: G }), (W.litElementVersions ??= []).push("4.2.2");
 //#endregion
 //#region node_modules/@lit/reactive-element/decorators/custom-element.js
-var xe = (e) => (t, n) => {
+var Se = (e) => (t, n) => {
 	n === void 0 ? customElements.define(e, t) : n.addInitializer(() => {
 		customElements.define(e, t);
 	});
-}, Se = {
+}, Ce = {
 	attribute: !0,
 	type: String,
 	converter: h,
 	reflect: !1,
 	hasChanged: g
-}, Ce = (e = Se, t, n) => {
+}, we = (e = Ce, t, n) => {
 	let { kind: r, metadata: i } = n, a = globalThis.litPropertyMetadata.get(i);
 	if (a === void 0 && globalThis.litPropertyMetadata.set(i, a = /* @__PURE__ */ new Map()), r === "setter" && ((e = Object.create(e)).wrapped = !0), a.set(n.name, e), r === "accessor") {
 		let { name: r } = n;
@@ -541,16 +541,16 @@ var xe = (e) => (t, n) => {
 	}
 	throw Error("Unsupported decorator location: " + r);
 };
-function q(e) {
-	return (t, n) => typeof n == "object" ? Ce(e, t, n) : ((e, t, n) => {
+function K(e) {
+	return (t, n) => typeof n == "object" ? we(e, t, n) : ((e, t, n) => {
 		let r = t.hasOwnProperty(n);
 		return t.constructor.createProperty(n, e), r ? Object.getOwnPropertyDescriptor(t, n) : void 0;
 	})(e, t, n);
 }
 //#endregion
 //#region node_modules/@lit/reactive-element/decorators/state.js
-function J(e) {
-	return q({
+function q(e) {
+	return K({
 		...e,
 		state: !0,
 		attribute: !1
@@ -558,14 +558,14 @@ function J(e) {
 }
 //#endregion
 //#region src/energy.ts
-function Y(e) {
+function Te(e) {
 	return typeof e == "object" && !!e;
 }
-function X(e, t) {
+function J(e, t) {
 	let n = e[t];
 	return typeof n == "string" && n.length > 0 ? n : void 0;
 }
-function Z(e, t, n) {
+function Y(e, t, n) {
 	if (!t) return;
 	let r = e.find((e) => e.entityId === t);
 	r ? r.multiplier += n : e.push({
@@ -573,41 +573,59 @@ function Z(e, t, n) {
 		multiplier: n
 	});
 }
-function we(e, t) {
-	let n = X(t, "stat_rate"), r = X(t, "stat_rate_inverted");
+function Ee(e, t) {
+	let n = J(t, "stat_rate"), r = J(t, "stat_rate_inverted");
 	if (n || r) {
-		Z(e, n, 1), Z(e, r, -1);
+		Y(e, n, 1), Y(e, r, -1);
 		return;
 	}
-	Z(e, X(t, "stat_rate_from"), 1), Z(e, X(t, "stat_rate_to"), -1);
+	Y(e, J(t, "stat_rate_from"), 1), Y(e, J(t, "stat_rate_to"), -1);
 }
-function Te(e) {
-	let t = [];
+function X(e) {
+	let t = /* @__PURE__ */ new Map();
 	for (let n of e.energy_sources ?? []) {
-		if (!Y(n)) continue;
-		let e = X(n, "type"), r = Y(n.power_config) ? n.power_config : n;
-		if (e === "solar") Z(t, X(n, "stat_rate"), 1);
+		if (!Te(n)) continue;
+		let e = J(n, "type");
+		if (e !== "solar" && e !== "grid" && e !== "battery") continue;
+		let r = t.get(e) ?? [];
+		t.set(e, r);
+		let i = Te(n.power_config) ? n.power_config : n;
+		if (e === "solar") Y(r, J(n, "stat_rate"), 1);
 		else if (e === "grid") {
-			let e = X(n, "stat_rate");
-			e ? Z(t, e, 1) : we(t, r);
-		} else e === "battery" && we(t, r);
+			let e = J(n, "stat_rate");
+			e ? Y(r, e, 1) : Ee(r, i);
+		} else e === "battery" && Ee(r, i);
 	}
-	return t.filter((e) => e.multiplier !== 0);
+	return [...t.entries()].map(([e, t]) => ({
+		kind: e,
+		channels: t.filter((e) => e.multiplier !== 0)
+	})).filter((e) => e.channels.length > 0);
 }
-function Ee(e) {
+function De(e) {
+	return X(e).flatMap((e) => e.channels);
+}
+function Z(e) {
 	if (!e) return null;
 	let t = Number(e.state);
 	if (!Number.isFinite(t)) return null;
 	let n = e.attributes.unit_of_measurement?.toLowerCase();
 	return n === "kw" ? t * 1e3 : n === "mw" ? t * 1e6 : n === "w" || n === void 0 ? t : null;
 }
-function De(e, t) {
+function Oe(e, t) {
 	let n = 0, r = 0;
 	for (let i of t) {
-		let t = Ee(e[i.entityId]);
+		let t = Z(e[i.entityId]);
 		t !== null && (n += t * i.multiplier, r += 1);
 	}
 	return r > 0 ? Math.max(0, n) : null;
+}
+function ke(e, t) {
+	let n = 0, r = 0;
+	for (let i of t.channels) {
+		let t = Z(e[i.entityId]);
+		t !== null && (n += t * i.multiplier, r += 1);
+	}
+	return r > 0 ? n : null;
 }
 //#endregion
 //#region \0@oxc-project+runtime@0.139.0/helpers/esm/decorate.js
@@ -619,9 +637,9 @@ function Q(e, t, n, r) {
 }
 //#endregion
 //#region src/power-orb-card.ts
-var Oe = 300 * 1e3, $ = class extends K {
+var Ae = 300 * 1e3, $ = class extends G {
 	constructor(...e) {
-		super(...e), this.channels = [], this.loading = !0, this.samples = [], this.config = { type: "custom:power-orb" }, this.connectionGeneration = 0, this.lastSampleAt = 0;
+		super(...e), this.channels = [], this.flows = [], this.loading = !0, this.samples = [], this.config = { type: "custom:power-orb" }, this.connectionGeneration = 0, this.lastSampleAt = 0;
 	}
 	set hass(e) {
 		this._hass = e, this.captureSample(), this.requestUpdate();
@@ -635,7 +653,7 @@ var Oe = 300 * 1e3, $ = class extends K {
 		this.config = e, this.channels = e.entity ? [{
 			entityId: e.entity,
 			multiplier: 1
-		}] : [], this.loading = !e.entity, this.error = void 0, this.samples = [], this.disconnectData(), this.isConnected && this._hass && this.connect();
+		}] : [], this.flows = [], this.loading = !e.entity, this.error = void 0, this.samples = [], this.disconnectData(), this.isConnected && this._hass && this.connect();
 	}
 	static getStubConfig() {
 		return { type: "custom:power-orb" };
@@ -667,7 +685,7 @@ var Oe = 300 * 1e3, $ = class extends K {
 	}
 	async startDiscovery(e) {
 		if (await this.loadEnergyPreferences(), !(e !== this.connectionGeneration || !this._hass)) {
-			this.refreshTimer = window.setInterval(() => void this.loadEnergyPreferences(), Oe);
+			this.refreshTimer = window.setInterval(() => void this.loadEnergyPreferences(), Ae);
 			try {
 				let t = await this._hass.connection.subscribeEvents(() => void this.loadEnergyPreferences(), "power_orb_refresh");
 				e === this.connectionGeneration ? this.unsubscribe = t : t();
@@ -682,7 +700,7 @@ var Oe = 300 * 1e3, $ = class extends K {
 			this.loading = !0;
 			try {
 				let e = await this._hass.callWS({ type: "energy/get_prefs" });
-				this.channels = Te(e), this.error = this.channels.length === 0 ? "Add real-time power sensors to your Energy dashboard." : void 0, this.captureSample(!0);
+				this.flows = X(e), this.channels = De(e), this.error = this.channels.length === 0 ? "Add real-time power sensors to your Energy dashboard." : void 0, this.captureSample(!0);
 			} catch {
 				this.error = "Power Orb could not read the Energy dashboard.";
 			} finally {
@@ -691,7 +709,7 @@ var Oe = 300 * 1e3, $ = class extends K {
 		}
 	}
 	currentPower() {
-		return this._hass ? this.config.entity ? Ee(this._hass.states[this.config.entity]) : De(this._hass.states, this.channels) : null;
+		return this._hass ? this.config.entity ? Z(this._hass.states[this.config.entity]) : Oe(this._hass.states, this.channels) : null;
 	}
 	captureSample(e = !1) {
 		let t = Date.now();
@@ -707,9 +725,9 @@ var Oe = 300 * 1e3, $ = class extends K {
 		};
 	}
 	sparkline() {
-		if (this.samples.length < 2) return L;
+		if (this.samples.length < 2) return I;
 		let e = Math.max(...this.samples, 1), t = Math.max(this.samples.length - 1, 1);
-		return de`
+		return P`
       <svg class="sparkline" viewBox="0 0 100 42" preserveAspectRatio="none"
         role="img" aria-label="Recent power trend">
         <polyline points=${this.samples.map((n, r) => {
@@ -719,33 +737,104 @@ var Oe = 300 * 1e3, $ = class extends K {
       </svg>
     `;
 	}
+	flowValue(e) {
+		if (!this._hass) return null;
+		let t = this.flows.find((t) => t.kind === e);
+		return t ? ke(this._hass.states, t) : null;
+	}
+	flowLabel(e, t) {
+		return Math.abs(t) < 1 ? "idle" : e === "grid" ? t > 0 ? "importing" : "exporting" : e === "battery" ? t > 0 ? "supplying" : "charging" : t > 0 ? "generating" : "idle";
+	}
+	renderFlow(e) {
+		if (!this.flows.find((t) => t.kind === e)) return I;
+		let t = this.flowValue(e), n = t === null ? void 0 : this.formatPower(Math.abs(t)), r = t !== null && Math.abs(t) >= 1, i = r ? Math.max(.9, 4.5 - Math.min(Math.abs(t), 1e4) / 2800) : 0, a = t !== null && t < 0 ? "outward" : "inward", o = {
+			solar: "Solar",
+			grid: "Grid",
+			battery: "Battery"
+		};
+		return N`
+      <div
+        class=${`flow flow-${e} ${r ? a : "idle"}`}
+        style=${`--flow-speed:${i}s`}
+        aria-label=${`${o[e]} ${n ? `${n.value} ${n.unit}, ${this.flowLabel(e, t ?? 0)}` : "unavailable"}`}
+      >
+        <span class="flow-icon" aria-hidden="true"></span>
+        <span class="flow-copy">
+          <small>${o[e]}</small>
+          <strong
+            >${n ? N`${n.value}<em>${n.unit}</em>` : "—"}</strong
+          >
+          <span>${t === null ? "unavailable" : this.flowLabel(e, t)}</span>
+        </span>
+      </div>
+    `;
+	}
 	render() {
 		let e = this.currentPower(), t = this.config.max_power ?? Math.max(...this.samples, e ?? 0, 5e3), n = e === null ? 0 : Math.min(1, Math.max(.08, e / t)), r = e === null ? void 0 : this.formatPower(e);
-		return F`
+		return N`
       <ha-card>
         <div class="card" style=${`--intensity:${n}`}>
           <header>
-            <span>${this.config.name ?? "Power Orb"}</span>
+            <div>
+              <small>Energy constellation</small>
+              <span>${this.config.name ?? "Power Orb"}</span>
+            </div>
             <span class="status" title="Live data">
               <i class=${e === null ? "offline" : ""}></i> live
             </span>
           </header>
 
-          <div class="visual">
-            <div class="orb" aria-hidden="true">
-              <div class="core"></div>
-              <div class="ring ring-one"></div>
-              <div class="ring ring-two"></div>
-            </div>
-            <div class="reading" aria-live="polite">
-              ${r ? F`<strong>${r.value}</strong
-                    ><span>${r.unit}</span>` : F`<strong>—</strong>`}
-              <small>home power</small>
+          <div class=${`constellation ${this.config.entity ? "direct" : ""}`}>
+            <svg class="flow-map" viewBox="0 0 600 360" aria-hidden="true">
+              ${[
+			"solar",
+			"grid",
+			"battery"
+		].map((e) => {
+			if (!this.flows.some((t) => t.kind === e)) return I;
+			let t = {
+				solar: "M 105 78 C 185 78, 205 180, 300 180",
+				grid: "M 495 78 C 415 78, 395 180, 300 180",
+				battery: "M 105 286 C 185 286, 205 180, 300 180"
+			}, n = this.flowValue(e), r = n !== null && Math.abs(n) >= 1, i = n !== null && n < 0 ? "outward" : "inward", a = r ? Math.max(.9, 4.5 - Math.min(Math.abs(n), 1e4) / 2800) : 0;
+			return P`
+                    <path class=${`track ${e}`} d=${t[e]}></path>
+                    <path
+                      class=${`energy ${e} ${r ? i : "idle"}`}
+                      style=${`--flow-speed:${a}s`}
+                      d=${t[e]}
+                    ></path>
+                  `;
+		})}
+            </svg>
+
+            ${this.config.entity ? I : N`
+                  ${this.renderFlow("solar")}
+                  ${this.renderFlow("grid")}
+                  ${this.renderFlow("battery")}
+                `}
+
+            <div class="home">
+              <div class="orb" aria-hidden="true">
+                <div class="facet"></div>
+                <div class="core"></div>
+                <div class="ring ring-one"></div>
+                <div class="ring ring-two"></div>
+              </div>
+              <div class="reading" aria-live="polite">
+                <small>Home</small>
+                ${r ? N`<strong>${r.value}</strong
+                      ><span>${r.unit}</span>` : N`<strong>—</strong>`}
+                <em>live demand</em>
+              </div>
             </div>
           </div>
 
-          ${this.sparkline()}
-          ${this.loading ? F`<p class="message">Discovering Energy dashboard…</p>` : this.error ? F`<p class="message error">${this.error}</p>` : F`<p class="message">
+          <div class="trend">
+            <span>60-second demand trace</span>
+            ${this.sparkline()}
+          </div>
+          ${this.loading ? N`<p class="message">Discovering Energy dashboard…</p>` : this.error ? N`<p class="message error">${this.error}</p>` : N`<p class="message">
                   ${this.config.entity ? this.config.entity : `${this.channels.length} live ${this.channels.length === 1 ? "sensor" : "sensors"}`}
                 </p>`}
         </div>
@@ -756,29 +845,65 @@ var Oe = 300 * 1e3, $ = class extends K {
 		this.styles = o`
     :host {
       display: block;
+      --orb-solar: #ffc857;
+      --orb-grid: #68a7ff;
+      --orb-battery: #b68cff;
+      --orb-home: #72f5dc;
     }
     ha-card {
       overflow: hidden;
       background:
-        radial-gradient(circle at 50% 35%, rgba(23, 104, 122, 0.24), transparent 45%),
-        var(--ha-card-background, var(--card-background-color, #10161d));
-      color: var(--primary-text-color, #f4fbff);
+        radial-gradient(circle at 50% 45%, rgba(45, 120, 126, 0.15), transparent 35%),
+        radial-gradient(circle at 8% 0%, rgba(95, 68, 132, 0.16), transparent 34%),
+        linear-gradient(145deg, #11121a, #08090e 60%, #0d1018);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--primary-text-color, #f7f8ff);
     }
     .card {
-      min-height: 320px;
-      padding: 20px;
+      min-height: 500px;
+      padding: 22px;
       position: relative;
       box-sizing: border-box;
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.22;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.32) 0.5px, transparent 0.5px);
+      background-size: 7px 7px;
+      mask-image: linear-gradient(to bottom, black, transparent 70%);
     }
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 18px;
-      font-weight: 600;
+      position: relative;
+      z-index: 2;
+    }
+    header div {
+      display: grid;
+      gap: 4px;
+    }
+    header div > small {
+      color: #8f93a8;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+    header div > span {
+      font-size: 19px;
+      font-weight: 650;
+      letter-spacing: -0.02em;
     }
     .status {
-      color: var(--secondary-text-color, #aab8c2);
+      padding: 6px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.035);
+      color: #a7abbd;
       font-size: 11px;
       font-weight: 500;
       letter-spacing: 0.12em;
@@ -790,44 +915,165 @@ var Oe = 300 * 1e3, $ = class extends K {
       height: 7px;
       margin-right: 5px;
       border-radius: 50%;
-      background: #44e0a1;
-      box-shadow: 0 0 8px #44e0a1;
+      background: var(--orb-home);
+      box-shadow: 0 0 8px var(--orb-home);
     }
     .status i.offline {
       background: #7f8b93;
       box-shadow: none;
     }
-    .visual {
-      height: 205px;
-      display: grid;
-      place-items: center;
+    .constellation {
+      height: 350px;
+      margin-top: 8px;
       position: relative;
     }
-    .orb {
-      width: 156px;
-      height: 156px;
+    .constellation.direct {
+      display: grid;
+      place-items: center;
+    }
+    .flow-map {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      inset: 0;
+      overflow: visible;
+    }
+    .flow-map path {
+      fill: none;
+      vector-effect: non-scaling-stroke;
+    }
+    .flow-map .track {
+      stroke: rgba(255, 255, 255, 0.08);
+      stroke-width: 2;
+    }
+    .flow-map .energy {
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-dasharray: 1 14;
+      animation: current var(--flow-speed) linear infinite;
+      filter: drop-shadow(0 0 5px currentColor);
+    }
+    .flow-map .energy.inward {
+      animation-direction: reverse;
+    }
+    .flow-map .energy.idle {
+      opacity: 0.2;
+      animation: none;
+    }
+    .flow-map .solar { color: var(--orb-solar); stroke: var(--orb-solar); }
+    .flow-map .grid { color: var(--orb-grid); stroke: var(--orb-grid); }
+    .flow-map .battery { color: var(--orb-battery); stroke: var(--orb-battery); }
+    .flow {
+      width: 116px;
+      min-height: 68px;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      position: absolute;
+      z-index: 2;
+      box-sizing: border-box;
+      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+      border-radius: 16px;
+      background: rgba(18, 20, 30, 0.76);
+      box-shadow: inset 0 1px rgba(255, 255, 255, 0.055), 0 14px 35px rgba(0, 0, 0, 0.22);
+      backdrop-filter: blur(12px);
+    }
+    .flow-solar { top: 10px; left: 1%; color: var(--orb-solar); }
+    .flow-grid { top: 10px; right: 1%; color: var(--orb-grid); }
+    .flow-battery { bottom: 0; left: 1%; color: var(--orb-battery); }
+    .flow-icon {
+      width: 12px;
+      height: 12px;
+      flex: 0 0 auto;
+      border: 2px solid currentColor;
+      border-radius: 50%;
+      box-shadow: 0 0 13px currentColor;
+    }
+    .flow-battery .flow-icon {
+      border-radius: 3px;
+    }
+    .flow-grid .flow-icon {
+      transform: rotate(45deg);
+      border-radius: 2px;
+    }
+    .flow-copy {
+      min-width: 0;
+      display: grid;
+    }
+    .flow-copy small,
+    .flow-copy > span {
+      color: #8f93a8;
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .flow-copy strong {
+      margin: 2px 0;
+      color: #f7f8ff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 16px;
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+    }
+    .flow-copy em {
+      margin-left: 3px;
+      color: currentColor;
+      font-size: 9px;
+      font-style: normal;
+    }
+    .home {
+      width: 174px;
+      height: 174px;
+      display: grid;
+      place-items: center;
+      position: absolute;
+      z-index: 3;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .direct .home {
       position: relative;
+      left: auto;
+      top: auto;
+      transform: none;
+    }
+    .orb {
+      width: 146px;
+      height: 146px;
+      position: absolute;
       border-radius: 50%;
       background:
-        radial-gradient(circle at 42% 38%, rgba(255, 255, 255, 0.9), transparent 5%),
-        radial-gradient(circle at 50% 50%, #8cf7ee 0%, #20b8ca 30%, #086177 68%, #032d3c 100%);
+        linear-gradient(145deg, rgba(255, 255, 255, 0.12), transparent 38%),
+        radial-gradient(circle at 45% 42%, #26363c 0%, #111b22 44%, #06090d 76%);
+      border: 1px solid rgba(164, 255, 238, 0.24);
       box-shadow:
-        0 0 calc(18px + 36px * var(--intensity)) rgba(41, 218, 222, calc(0.2 + 0.55 * var(--intensity))),
-        inset -18px -16px 30px rgba(0, 12, 28, 0.55);
+        0 0 calc(12px + 30px * var(--intensity)) rgba(85, 234, 211, calc(0.14 + 0.36 * var(--intensity))),
+        inset -22px -18px 34px rgba(0, 0, 0, 0.62);
       transform: scale(calc(0.94 + 0.06 * var(--intensity)));
       transition: box-shadow 0.8s ease, transform 0.8s ease;
+    }
+    .facet {
+      position: absolute;
+      inset: 9%;
+      border-radius: 42% 58% 48% 52%;
+      background:
+        linear-gradient(32deg, transparent 48%, rgba(145, 255, 235, 0.08) 49%, transparent 51%),
+        linear-gradient(145deg, transparent 47%, rgba(255, 255, 255, 0.07) 48%, transparent 50%);
+      transform: rotate(14deg);
     }
     .core {
       position: absolute;
       inset: 18%;
       border-radius: 50%;
-      border: 1px solid rgba(177, 255, 250, 0.35);
+      border: 1px solid rgba(155, 255, 237, 0.28);
       animation: breathe 3s ease-in-out infinite;
     }
     .ring {
       position: absolute;
       inset: -12px;
-      border: 1px solid rgba(77, 225, 232, 0.35);
+      border: 1px solid rgba(114, 245, 220, 0.3);
       border-radius: 50%;
       transform: rotateX(68deg) rotateZ(12deg);
     }
@@ -844,10 +1090,11 @@ var Oe = 300 * 1e3, $ = class extends K {
       align-items: baseline;
       gap: 5px;
       text-align: center;
-      text-shadow: 0 2px 12px #002b37;
+      text-shadow: 0 2px 12px #001b18;
     }
     .reading strong {
-      font-size: 35px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 31px;
       line-height: 1;
       font-variant-numeric: tabular-nums;
     }
@@ -855,12 +1102,30 @@ var Oe = 300 * 1e3, $ = class extends K {
       font-size: 15px;
       font-weight: 600;
     }
-    .reading small {
+    .reading small,
+    .reading em {
       grid-column: 1 / -1;
-      margin-top: 6px;
-      color: rgba(235, 255, 255, 0.82);
-      font-size: 10px;
-      letter-spacing: 0.1em;
+      color: rgba(221, 255, 249, 0.76);
+      font-size: 9px;
+      font-style: normal;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .reading small { margin-bottom: 5px; }
+    .reading em { margin-top: 6px; }
+    .trend {
+      height: 54px;
+      padding: 7px 10px 0;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+    .trend > span {
+      position: absolute;
+      color: #74788d;
+      font-size: 8px;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
     }
     .sparkline {
@@ -871,7 +1136,7 @@ var Oe = 300 * 1e3, $ = class extends K {
     }
     .sparkline polyline {
       fill: none;
-      stroke: #55dce3;
+      stroke: var(--orb-home);
       stroke-width: 1.5;
       vector-effect: non-scaling-stroke;
     }
@@ -891,13 +1156,22 @@ var Oe = 300 * 1e3, $ = class extends K {
     @keyframes orbit {
       to { transform: rotateY(67deg) rotateZ(338deg); }
     }
+    @keyframes current {
+      to { stroke-dashoffset: 30; }
+    }
+    @media (max-width: 430px) {
+      .card { padding: 17px; }
+      .flow { width: 104px; padding: 8px; }
+      .flow-copy strong { font-size: 14px; }
+    }
     @media (prefers-reduced-motion: reduce) {
-      .core, .ring-two { animation: none; }
+      .core, .ring-two, .flow-map .energy { animation: none; }
+      .flow-map .energy { stroke-dasharray: none; opacity: 0.65; }
     }
   `;
 	}
 };
-Q([q({ attribute: !1 })], $.prototype, "hass", null), Q([J()], $.prototype, "channels", void 0), Q([J()], $.prototype, "loading", void 0), Q([J()], $.prototype, "error", void 0), Q([J()], $.prototype, "samples", void 0), $ = Q([xe("power-orb")], $), window.customCards = window.customCards ?? [], window.customCards.some((e) => e.type === "power-orb") || window.customCards.push({
+Q([K({ attribute: !1 })], $.prototype, "hass", null), Q([q()], $.prototype, "channels", void 0), Q([q()], $.prototype, "flows", void 0), Q([q()], $.prototype, "loading", void 0), Q([q()], $.prototype, "error", void 0), Q([q()], $.prototype, "samples", void 0), $ = Q([Se("power-orb")], $), window.customCards = window.customCards ?? [], window.customCards.some((e) => e.type === "power-orb") || window.customCards.push({
 	type: "power-orb",
 	name: "Power Orb",
 	description: "Live home power from the Home Assistant Energy dashboard",
