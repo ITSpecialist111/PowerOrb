@@ -1,4 +1,6 @@
 import type {
+  EnergyFlow,
+  EnergyFlowKind,
   EnergyPreferences,
   HassEntity,
   PowerChannel,
@@ -45,14 +47,18 @@ function addPowerConfigChannels(
   addChannel(channels, stringValue(config, "stat_rate_to"), -1);
 }
 
-export function discoverPowerChannels(
+export function discoverEnergyFlows(
   preferences: EnergyPreferences,
-): PowerChannel[] {
-  const channels: PowerChannel[] = [];
+): EnergyFlow[] {
+  const flows = new Map<EnergyFlowKind, PowerChannel[]>();
 
   for (const source of preferences.energy_sources ?? []) {
     if (!isRecord(source)) continue;
     const type = stringValue(source, "type");
+    if (type !== "solar" && type !== "grid" && type !== "battery") continue;
+
+    const channels = flows.get(type) ?? [];
+    flows.set(type, channels);
     const powerConfig = isRecord(source.power_config)
       ? source.power_config
       : source;
@@ -71,7 +77,18 @@ export function discoverPowerChannels(
     }
   }
 
-  return channels.filter((channel) => channel.multiplier !== 0);
+  return [...flows.entries()]
+    .map(([kind, channels]) => ({
+      kind,
+      channels: channels.filter((channel) => channel.multiplier !== 0),
+    }))
+    .filter((flow) => flow.channels.length > 0);
+}
+
+export function discoverPowerChannels(
+  preferences: EnergyPreferences,
+): PowerChannel[] {
+  return discoverEnergyFlows(preferences).flatMap((flow) => flow.channels);
 }
 
 export function entityPowerInWatts(entity: HassEntity | undefined): number | null {
@@ -100,4 +117,21 @@ export function totalPowerInWatts(
   }
 
   return validChannels > 0 ? Math.max(0, total) : null;
+}
+
+export function flowPowerInWatts(
+  states: Record<string, HassEntity>,
+  flow: EnergyFlow,
+): number | null {
+  let total = 0;
+  let validChannels = 0;
+
+  for (const channel of flow.channels) {
+    const value = entityPowerInWatts(states[channel.entityId]);
+    if (value === null) continue;
+    total += value * channel.multiplier;
+    validChannels += 1;
+  }
+
+  return validChannels > 0 ? total : null;
 }

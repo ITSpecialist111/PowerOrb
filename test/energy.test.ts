@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  discoverEnergyFlows,
   discoverPowerChannels,
   entityPowerInWatts,
+  flowPowerInWatts,
   totalPowerInWatts,
 } from "../src/energy";
 
@@ -25,6 +27,41 @@ describe("discoverPowerChannels", () => {
       { entityId: "sensor.grid_import", multiplier: 1 },
       { entityId: "sensor.grid_export", multiplier: -1 },
     ]);
+  });
+
+  describe("discoverEnergyFlows", () => {
+    it("groups channels by their role in the energy system", () => {
+      expect(
+        discoverEnergyFlows({
+          energy_sources: [
+            { type: "solar", stat_rate: "sensor.roof_power" },
+            { type: "solar", stat_rate: "sensor.garage_power" },
+            {
+              type: "battery",
+              power_config: {
+                stat_rate_from: "sensor.battery_discharge",
+                stat_rate_to: "sensor.battery_charge",
+              },
+            },
+          ],
+        }),
+      ).toEqual([
+        {
+          kind: "solar",
+          channels: [
+            { entityId: "sensor.roof_power", multiplier: 1 },
+            { entityId: "sensor.garage_power", multiplier: 1 },
+          ],
+        },
+        {
+          kind: "battery",
+          channels: [
+            { entityId: "sensor.battery_discharge", multiplier: 1 },
+            { entityId: "sensor.battery_charge", multiplier: -1 },
+          ],
+        },
+      ]);
+    });
   });
 
   it("honors the inverted signed power sensor slot", () => {
@@ -118,5 +155,24 @@ describe("power calculations", () => {
         { entityId: "sensor.grid", multiplier: 1 },
       ]),
     ).toBe(1500);
+  });
+
+  it("preserves direction for an individual energy flow", () => {
+    expect(
+      flowPowerInWatts(
+        {
+          "sensor.grid_export": {
+            state: "0.8",
+            attributes: { unit_of_measurement: "kW" },
+          },
+        },
+        {
+          kind: "grid",
+          channels: [
+            { entityId: "sensor.grid_export", multiplier: -1 },
+          ],
+        },
+      ),
+    ).toBe(-800);
   });
 });

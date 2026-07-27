@@ -1,11 +1,15 @@
 import { LitElement, css, html, nothing, svg } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
+  discoverEnergyFlows,
   discoverPowerChannels,
   entityPowerInWatts,
+  flowPowerInWatts,
   totalPowerInWatts,
 } from "./energy";
 import type {
+  EnergyFlow,
+  EnergyFlowKind,
   EnergyPreferences,
   HomeAssistant,
   PowerChannel,
@@ -29,6 +33,7 @@ export class PowerOrbCard extends LitElement {
   }
 
   @state() private channels: PowerChannel[] = [];
+  @state() private flows: EnergyFlow[] = [];
   @state() private loading = true;
   @state() private error?: string;
   @state() private samples: number[] = [];
@@ -52,6 +57,7 @@ export class PowerOrbCard extends LitElement {
     this.channels = config.entity
       ? [{ entityId: config.entity, multiplier: 1 }]
       : [];
+    this.flows = [];
     this.loading = !config.entity;
     this.error = undefined;
     this.samples = [];
@@ -143,6 +149,7 @@ export class PowerOrbCard extends LitElement {
       const preferences = await this._hass.callWS<EnergyPreferences>({
         type: "energy/get_prefs",
       });
+      this.flows = discoverEnergyFlows(preferences);
       this.channels = discoverPowerChannels(preferences);
       this.error =
         this.channels.length === 0
@@ -206,6 +213,56 @@ export class PowerOrbCard extends LitElement {
     `;
   }
 
+  private flowValue(kind: EnergyFlowKind): number | null {
+    if (!this._hass) return null;
+    const flow = this.flows.find((candidate) => candidate.kind === kind);
+    return flow ? flowPowerInWatts(this._hass.states, flow) : null;
+  }
+
+  private flowLabel(kind: EnergyFlowKind, watts: number): string {
+    if (Math.abs(watts) < 1) return "idle";
+    if (kind === "grid") return watts > 0 ? "importing" : "exporting";
+    if (kind === "battery") return watts > 0 ? "supplying" : "charging";
+    return watts > 0 ? "generating" : "idle";
+  }
+
+  private renderFlow(kind: EnergyFlowKind) {
+    const flow = this.flows.find((candidate) => candidate.kind === kind);
+    if (!flow) return nothing;
+
+    const watts = this.flowValue(kind);
+    const formatted = watts === null ? undefined : this.formatPower(Math.abs(watts));
+    const active = watts !== null && Math.abs(watts) >= 1;
+    const speed = active
+      ? Math.max(0.9, 4.5 - Math.min(Math.abs(watts), 10_000) / 2_800)
+      : 0;
+    const direction = watts !== null && watts < 0 ? "outward" : "inward";
+    const names: Record<EnergyFlowKind, string> = {
+      solar: "Solar",
+      grid: "Grid",
+      battery: "Battery",
+    };
+
+    return html`
+      <div
+        class=${`flow flow-${kind} ${active ? direction : "idle"}`}
+        style=${`--flow-speed:${speed}s`}
+        aria-label=${`${names[kind]} ${formatted ? `${formatted.value} ${formatted.unit}, ${this.flowLabel(kind, watts ?? 0)}` : "unavailable"}`}
+      >
+        <span class="flow-icon" aria-hidden="true"></span>
+        <span class="flow-copy">
+          <small>${names[kind]}</small>
+          <strong
+            >${formatted
+              ? html`${formatted.value}<em>${formatted.unit}</em>`
+              : "—"}</strong
+          >
+          <span>${watts === null ? "unavailable" : this.flowLabel(kind, watts)}</span>
+        </span>
+      </div>
+    `;
+  }
+
   protected render() {
     const power = this.currentPower();
     const maxPower =
@@ -218,28 +275,78 @@ export class PowerOrbCard extends LitElement {
       <ha-card>
         <div class="card" style=${`--intensity:${intensity}`}>
           <header>
-            <span>${this.config.name ?? "Power Orb"}</span>
+            <div>
+              <small>Energy constellation</small>
+              <span>${this.config.name ?? "Power Orb"}</span>
+            </div>
             <span class="status" title="Live data">
               <i class=${power === null ? "offline" : ""}></i> live
             </span>
           </header>
 
-          <div class="visual">
-            <div class="orb" aria-hidden="true">
-              <div class="core"></div>
-              <div class="ring ring-one"></div>
-              <div class="ring ring-two"></div>
-            </div>
-            <div class="reading" aria-live="polite">
-              ${formatted
-                ? html`<strong>${formatted.value}</strong
-                    ><span>${formatted.unit}</span>`
-                : html`<strong>—</strong>`}
-              <small>home power</small>
+          <div class=${`constellation ${this.config.entity ? "direct" : ""}`}>
+            <svg class="flow-map" viewBox="0 0 600 360" aria-hidden="true">
+              ${(["solar", "grid", "battery"] as EnergyFlowKind[]).map(
+                (kind) => {
+                  if (!this.flows.some((flow) => flow.kind === kind)) {
+                    return nothing;
+                  }
+                  const paths: Record<EnergyFlowKind, string> = {
+                    solar: "M 105 78 C 185 78, 205 180, 300 180",
+                    grid: "M 495 78 C 415 78, 395 180, 300 180",
+                    battery: "M 105 286 C 185 286, 205 180, 300 180",
+                  };
+                  const watts = this.flowValue(kind);
+                  const active = watts !== null && Math.abs(watts) >= 1;
+                  const direction = watts !== null && watts < 0 ? "outward" : "inward";
+                  const speed = active
+                    ? Math.max(
+                        0.9,
+                        4.5 - Math.min(Math.abs(watts), 10_000) / 2_800,
+                      )
+                    : 0;
+                  return svg`
+                    <path class=${`track ${kind}`} d=${paths[kind]}></path>
+                    <path
+                      class=${`energy ${kind} ${active ? direction : "idle"}`}
+                      style=${`--flow-speed:${speed}s`}
+                      d=${paths[kind]}
+                    ></path>
+                  `;
+                },
+              )}
+            </svg>
+
+            ${this.config.entity
+              ? nothing
+              : html`
+                  ${this.renderFlow("solar")}
+                  ${this.renderFlow("grid")}
+                  ${this.renderFlow("battery")}
+                `}
+
+            <div class="home">
+              <div class="orb" aria-hidden="true">
+                <div class="facet"></div>
+                <div class="core"></div>
+                <div class="ring ring-one"></div>
+                <div class="ring ring-two"></div>
+              </div>
+              <div class="reading" aria-live="polite">
+                <small>Home</small>
+                ${formatted
+                  ? html`<strong>${formatted.value}</strong
+                      ><span>${formatted.unit}</span>`
+                  : html`<strong>—</strong>`}
+                <em>live demand</em>
+              </div>
             </div>
           </div>
 
-          ${this.sparkline()}
+          <div class="trend">
+            <span>60-second demand trace</span>
+            ${this.sparkline()}
+          </div>
           ${this.loading
             ? html`<p class="message">Discovering Energy dashboard…</p>`
             : this.error
@@ -257,29 +364,65 @@ export class PowerOrbCard extends LitElement {
   static styles = css`
     :host {
       display: block;
+      --orb-solar: #ffc857;
+      --orb-grid: #68a7ff;
+      --orb-battery: #b68cff;
+      --orb-home: #72f5dc;
     }
     ha-card {
       overflow: hidden;
       background:
-        radial-gradient(circle at 50% 35%, rgba(23, 104, 122, 0.24), transparent 45%),
-        var(--ha-card-background, var(--card-background-color, #10161d));
-      color: var(--primary-text-color, #f4fbff);
+        radial-gradient(circle at 50% 45%, rgba(45, 120, 126, 0.15), transparent 35%),
+        radial-gradient(circle at 8% 0%, rgba(95, 68, 132, 0.16), transparent 34%),
+        linear-gradient(145deg, #11121a, #08090e 60%, #0d1018);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--primary-text-color, #f7f8ff);
     }
     .card {
-      min-height: 320px;
-      padding: 20px;
+      min-height: 500px;
+      padding: 22px;
       position: relative;
       box-sizing: border-box;
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.22;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.32) 0.5px, transparent 0.5px);
+      background-size: 7px 7px;
+      mask-image: linear-gradient(to bottom, black, transparent 70%);
     }
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 18px;
-      font-weight: 600;
+      position: relative;
+      z-index: 2;
+    }
+    header div {
+      display: grid;
+      gap: 4px;
+    }
+    header div > small {
+      color: #8f93a8;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+    header div > span {
+      font-size: 19px;
+      font-weight: 650;
+      letter-spacing: -0.02em;
     }
     .status {
-      color: var(--secondary-text-color, #aab8c2);
+      padding: 6px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.035);
+      color: #a7abbd;
       font-size: 11px;
       font-weight: 500;
       letter-spacing: 0.12em;
@@ -291,44 +434,165 @@ export class PowerOrbCard extends LitElement {
       height: 7px;
       margin-right: 5px;
       border-radius: 50%;
-      background: #44e0a1;
-      box-shadow: 0 0 8px #44e0a1;
+      background: var(--orb-home);
+      box-shadow: 0 0 8px var(--orb-home);
     }
     .status i.offline {
       background: #7f8b93;
       box-shadow: none;
     }
-    .visual {
-      height: 205px;
-      display: grid;
-      place-items: center;
+    .constellation {
+      height: 350px;
+      margin-top: 8px;
       position: relative;
     }
-    .orb {
-      width: 156px;
-      height: 156px;
+    .constellation.direct {
+      display: grid;
+      place-items: center;
+    }
+    .flow-map {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      inset: 0;
+      overflow: visible;
+    }
+    .flow-map path {
+      fill: none;
+      vector-effect: non-scaling-stroke;
+    }
+    .flow-map .track {
+      stroke: rgba(255, 255, 255, 0.08);
+      stroke-width: 2;
+    }
+    .flow-map .energy {
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-dasharray: 1 14;
+      animation: current var(--flow-speed) linear infinite;
+      filter: drop-shadow(0 0 5px currentColor);
+    }
+    .flow-map .energy.inward {
+      animation-direction: reverse;
+    }
+    .flow-map .energy.idle {
+      opacity: 0.2;
+      animation: none;
+    }
+    .flow-map .solar { color: var(--orb-solar); stroke: var(--orb-solar); }
+    .flow-map .grid { color: var(--orb-grid); stroke: var(--orb-grid); }
+    .flow-map .battery { color: var(--orb-battery); stroke: var(--orb-battery); }
+    .flow {
+      width: 116px;
+      min-height: 68px;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      position: absolute;
+      z-index: 2;
+      box-sizing: border-box;
+      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+      border-radius: 16px;
+      background: rgba(18, 20, 30, 0.76);
+      box-shadow: inset 0 1px rgba(255, 255, 255, 0.055), 0 14px 35px rgba(0, 0, 0, 0.22);
+      backdrop-filter: blur(12px);
+    }
+    .flow-solar { top: 10px; left: 1%; color: var(--orb-solar); }
+    .flow-grid { top: 10px; right: 1%; color: var(--orb-grid); }
+    .flow-battery { bottom: 0; left: 1%; color: var(--orb-battery); }
+    .flow-icon {
+      width: 12px;
+      height: 12px;
+      flex: 0 0 auto;
+      border: 2px solid currentColor;
+      border-radius: 50%;
+      box-shadow: 0 0 13px currentColor;
+    }
+    .flow-battery .flow-icon {
+      border-radius: 3px;
+    }
+    .flow-grid .flow-icon {
+      transform: rotate(45deg);
+      border-radius: 2px;
+    }
+    .flow-copy {
+      min-width: 0;
+      display: grid;
+    }
+    .flow-copy small,
+    .flow-copy > span {
+      color: #8f93a8;
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .flow-copy strong {
+      margin: 2px 0;
+      color: #f7f8ff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 16px;
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+    }
+    .flow-copy em {
+      margin-left: 3px;
+      color: currentColor;
+      font-size: 9px;
+      font-style: normal;
+    }
+    .home {
+      width: 174px;
+      height: 174px;
+      display: grid;
+      place-items: center;
+      position: absolute;
+      z-index: 3;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .direct .home {
       position: relative;
+      left: auto;
+      top: auto;
+      transform: none;
+    }
+    .orb {
+      width: 146px;
+      height: 146px;
+      position: absolute;
       border-radius: 50%;
       background:
-        radial-gradient(circle at 42% 38%, rgba(255, 255, 255, 0.9), transparent 5%),
-        radial-gradient(circle at 50% 50%, #8cf7ee 0%, #20b8ca 30%, #086177 68%, #032d3c 100%);
+        linear-gradient(145deg, rgba(255, 255, 255, 0.12), transparent 38%),
+        radial-gradient(circle at 45% 42%, #26363c 0%, #111b22 44%, #06090d 76%);
+      border: 1px solid rgba(164, 255, 238, 0.24);
       box-shadow:
-        0 0 calc(18px + 36px * var(--intensity)) rgba(41, 218, 222, calc(0.2 + 0.55 * var(--intensity))),
-        inset -18px -16px 30px rgba(0, 12, 28, 0.55);
+        0 0 calc(12px + 30px * var(--intensity)) rgba(85, 234, 211, calc(0.14 + 0.36 * var(--intensity))),
+        inset -22px -18px 34px rgba(0, 0, 0, 0.62);
       transform: scale(calc(0.94 + 0.06 * var(--intensity)));
       transition: box-shadow 0.8s ease, transform 0.8s ease;
+    }
+    .facet {
+      position: absolute;
+      inset: 9%;
+      border-radius: 42% 58% 48% 52%;
+      background:
+        linear-gradient(32deg, transparent 48%, rgba(145, 255, 235, 0.08) 49%, transparent 51%),
+        linear-gradient(145deg, transparent 47%, rgba(255, 255, 255, 0.07) 48%, transparent 50%);
+      transform: rotate(14deg);
     }
     .core {
       position: absolute;
       inset: 18%;
       border-radius: 50%;
-      border: 1px solid rgba(177, 255, 250, 0.35);
+      border: 1px solid rgba(155, 255, 237, 0.28);
       animation: breathe 3s ease-in-out infinite;
     }
     .ring {
       position: absolute;
       inset: -12px;
-      border: 1px solid rgba(77, 225, 232, 0.35);
+      border: 1px solid rgba(114, 245, 220, 0.3);
       border-radius: 50%;
       transform: rotateX(68deg) rotateZ(12deg);
     }
@@ -345,10 +609,11 @@ export class PowerOrbCard extends LitElement {
       align-items: baseline;
       gap: 5px;
       text-align: center;
-      text-shadow: 0 2px 12px #002b37;
+      text-shadow: 0 2px 12px #001b18;
     }
     .reading strong {
-      font-size: 35px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 31px;
       line-height: 1;
       font-variant-numeric: tabular-nums;
     }
@@ -356,12 +621,30 @@ export class PowerOrbCard extends LitElement {
       font-size: 15px;
       font-weight: 600;
     }
-    .reading small {
+    .reading small,
+    .reading em {
       grid-column: 1 / -1;
-      margin-top: 6px;
-      color: rgba(235, 255, 255, 0.82);
-      font-size: 10px;
-      letter-spacing: 0.1em;
+      color: rgba(221, 255, 249, 0.76);
+      font-size: 9px;
+      font-style: normal;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .reading small { margin-bottom: 5px; }
+    .reading em { margin-top: 6px; }
+    .trend {
+      height: 54px;
+      padding: 7px 10px 0;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+    .trend > span {
+      position: absolute;
+      color: #74788d;
+      font-size: 8px;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
     }
     .sparkline {
@@ -372,7 +655,7 @@ export class PowerOrbCard extends LitElement {
     }
     .sparkline polyline {
       fill: none;
-      stroke: #55dce3;
+      stroke: var(--orb-home);
       stroke-width: 1.5;
       vector-effect: non-scaling-stroke;
     }
@@ -392,8 +675,17 @@ export class PowerOrbCard extends LitElement {
     @keyframes orbit {
       to { transform: rotateY(67deg) rotateZ(338deg); }
     }
+    @keyframes current {
+      to { stroke-dashoffset: 30; }
+    }
+    @media (max-width: 430px) {
+      .card { padding: 17px; }
+      .flow { width: 104px; padding: 8px; }
+      .flow-copy strong { font-size: 14px; }
+    }
     @media (prefers-reduced-motion: reduce) {
-      .core, .ring-two { animation: none; }
+      .core, .ring-two, .flow-map .energy { animation: none; }
+      .flow-map .energy { stroke-dasharray: none; opacity: 0.65; }
     }
   `;
 }

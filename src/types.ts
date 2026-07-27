@@ -38,3 +38,10 @@ export interface PowerChannel {
   entityId: string;
   multiplier: number;
 }
+
+export type EnergyFlowKind = "solar" | "grid" | "battery";
+
+export interface EnergyFlow {
+  kind: EnergyFlowKind;
+  channels: PowerChannel[];
+}
