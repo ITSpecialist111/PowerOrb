@@ -26,6 +26,7 @@ export interface PowerOrbConfig {
   type: "custom:power-orb";
   name?: string;
   entity?: string;
+  entities?: Partial<Record<EnergyFlowKind, string | string[]>>;
   max_power?: number;
   unit?: "W" | "kW";
 }

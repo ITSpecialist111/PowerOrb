@@ -1,6 +1,7 @@
 import { LitElement, css, html, nothing, svg } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
+  configuredEnergyFlows,
   discoverEnergyFlows,
   discoverPowerChannels,
   entityPowerInWatts,
@@ -53,12 +54,17 @@ export class PowerOrbCard extends LitElement {
     if (config.max_power !== undefined && config.max_power <= 0) {
       throw new Error("max_power must be greater than zero");
     }
+    if (config.entity && config.entities !== undefined) {
+      throw new Error("Configure either entity or entities, not both");
+    }
+    const configuredFlows =
+      config.entities === undefined ? [] : configuredEnergyFlows(config.entities);
     this.config = config;
     this.channels = config.entity
       ? [{ entityId: config.entity, multiplier: 1 }]
-      : [];
-    this.flows = [];
-    this.loading = !config.entity;
+      : configuredFlows.flatMap((flow) => flow.channels);
+    this.flows = configuredFlows;
+    this.loading = !config.entity && config.entities === undefined;
     this.error = undefined;
     this.samples = [];
     this.disconnectData();
@@ -98,7 +104,9 @@ export class PowerOrbCard extends LitElement {
   }
 
   private connect(): Promise<void> {
-    if (!this._hass || this.config.entity) return Promise.resolve();
+    if (!this._hass || this.config.entity || this.config.entities !== undefined) {
+      return Promise.resolve();
+    }
     if (this.connecting) return this.connecting;
 
     const generation = this.connectionGeneration;
@@ -143,7 +151,9 @@ export class PowerOrbCard extends LitElement {
   }
 
   private async loadEnergyPreferences(): Promise<void> {
-    if (!this._hass || this.config.entity) return;
+    if (!this._hass || this.config.entity || this.config.entities !== undefined) {
+      return;
+    }
     this.loading = true;
     try {
       const preferences = await this._hass.callWS<EnergyPreferences>({

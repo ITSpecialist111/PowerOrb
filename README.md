@@ -57,6 +57,7 @@ are valid HACS Dashboard sources.
 | --- | --- | --- | --- |
 | `name` | string | `Power Orb` | Card heading |
 | `entity` | string | auto-discovered | Direct instantaneous power sensor |
+| `entities` | mapping | auto-discovered | Explicit solar, grid, and battery power sensors |
 | `max_power` | number | dynamic / 5000 W | Power level at maximum glow |
 | `unit` | `W` or `kW` | automatic | Display unit |
 
@@ -69,6 +70,23 @@ entity: sensor.home_power
 max_power: 10000
 unit: kW
 ```
+
+To visualize power entities that are not configured in the Energy dashboard,
+map each entity explicitly to its role. A role accepts one entity ID or a list:
+
+```yaml
+type: custom:power-orb
+entities:
+  solar:
+    - sensor.roof_power
+    - sensor.garage_power
+  grid: sensor.grid_power
+  battery: sensor.battery_power
+```
+
+Explicit grid and battery entities should be signed: positive values mean grid
+import or battery supply, while negative values mean grid export or battery
+charging. `entity` and `entities` cannot be used together.
 
 For automatic discovery, configure real-time power sensors in
 **Settings → Dashboards → Energy**. Cumulative kWh meters are intentionally not

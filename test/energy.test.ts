@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  configuredEnergyFlows,
   discoverEnergyFlows,
   discoverPowerChannels,
   entityPowerInWatts,
@@ -110,6 +111,46 @@ describe("discoverPowerChannels", () => {
         ],
       }),
     ).toEqual([{ entityId: "sensor.battery", multiplier: 1 }]);
+  });
+});
+
+describe("configuredEnergyFlows", () => {
+  it("maps explicit entity IDs to energy roles", () => {
+    expect(
+      configuredEnergyFlows({
+        solar: ["sensor.roof_power", "sensor.garage_power"],
+        grid: "sensor.grid_power",
+        battery: "sensor.battery_power",
+      }),
+    ).toEqual([
+      {
+        kind: "solar",
+        channels: [
+          { entityId: "sensor.roof_power", multiplier: 1 },
+          { entityId: "sensor.garage_power", multiplier: 1 },
+        ],
+      },
+      {
+        kind: "grid",
+        channels: [{ entityId: "sensor.grid_power", multiplier: 1 }],
+      },
+      {
+        kind: "battery",
+        channels: [{ entityId: "sensor.battery_power", multiplier: 1 }],
+      },
+    ]);
+  });
+
+  it("rejects unknown roles and duplicate assignments", () => {
+    expect(() =>
+      configuredEnergyFlows({ home: "sensor.home_power" }),
+    ).toThrow("entities only supports solar, grid, and battery roles");
+    expect(() =>
+      configuredEnergyFlows({
+        solar: "sensor.shared",
+        grid: "sensor.shared",
+      }),
+    ).toThrow("sensor.shared cannot be assigned to more than one role");
   });
 });
 
