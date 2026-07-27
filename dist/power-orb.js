@@ -785,7 +785,12 @@ var Ae = 300 * 1e3, $ = class extends G {
           </header>
 
           <div class=${`constellation ${this.config.entity ? "direct" : ""}`}>
-            <svg class="flow-map" viewBox="0 0 600 360" aria-hidden="true">
+            <svg
+              class="flow-map"
+              viewBox="0 0 600 360"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
               ${[
 			"solar",
 			"grid",
@@ -979,9 +984,14 @@ var Ae = 300 * 1e3, $ = class extends G {
       box-shadow: inset 0 1px rgba(255, 255, 255, 0.055), 0 14px 35px rgba(0, 0, 0, 0.22);
       backdrop-filter: blur(12px);
     }
-    .flow-solar { top: 10px; left: 1%; color: var(--orb-solar); }
-    .flow-grid { top: 10px; right: 1%; color: var(--orb-grid); }
-    .flow-battery { bottom: 0; left: 1%; color: var(--orb-battery); }
+    .flow-solar,
+    .flow-grid,
+    .flow-battery {
+      transform: translate(-50%, -50%);
+    }
+    .flow-solar { top: 21.67%; left: 17.5%; color: var(--orb-solar); }
+    .flow-grid { top: 21.67%; left: 82.5%; color: var(--orb-grid); }
+    .flow-battery { top: 79.44%; left: 17.5%; color: var(--orb-battery); }
     .flow-icon {
       width: 12px;
       height: 12px;
