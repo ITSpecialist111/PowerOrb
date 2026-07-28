@@ -116,6 +116,23 @@ available for `solar`. `entity` and `entities` cannot be used together.
 Remember that `max_power`, `unit`, and `name` are top-level options, not
 entries under `entities`.
 
+### Size
+
+Power Orb asks for the full 12-column width and 10 rows of a sections
+dashboard, and never renders narrower than 6 columns. Override that per card
+with the standard `grid_options` block, or drag the resize handle in the
+dashboard editor:
+
+```yaml
+type: custom:power-orb
+grid_options:
+  columns: 12
+  rows: 10
+```
+
+The constellation is fluid, so the flow paths and badges scale with whatever
+width the card is given. On a masonry view the card fills its column instead.
+
 For automatic discovery, configure real-time power sensors in
 **Settings ÔåÆ Dashboards ÔåÆ Energy**. Cumulative kWh meters are intentionally not
 converted into live power because that produces inaccurate values between

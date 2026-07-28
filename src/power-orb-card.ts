@@ -79,7 +79,7 @@ export class PowerOrbCard extends LitElement {
   }
 
   public getCardSize(): number {
-    return 7;
+    return 10;
   }
 
   public getGridOptions(): {
@@ -89,10 +89,10 @@ export class PowerOrbCard extends LitElement {
     min_columns: number;
   } {
     return {
-      rows: 6,
-      columns: 6,
-      min_rows: 6,
-      min_columns: 3,
+      rows: 10,
+      columns: 12,
+      min_rows: 8,
+      min_columns: 6,
     };
   }
 
@@ -760,6 +760,13 @@ export class PowerOrbCard extends LitElement {
     }
     @keyframes current {
       to { stroke-dashoffset: 30; }
+    }
+    @media (max-width: 560px) {
+      .constellation { height: 320px; }
+      .flow { width: 100px; padding: 8px; gap: 7px; }
+      .home { width: 146px; height: 146px; }
+      .orb { width: 118px; height: 118px; }
+      .reading strong { font-size: 26px; }
     }
     @media (max-width: 430px) {
       .card { padding: 17px; }
