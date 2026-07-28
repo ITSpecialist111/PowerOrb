@@ -428,6 +428,9 @@ export class PowerOrbCard extends LitElement {
     const value = useKilowatts ? watts / 1_000 : watts;
     return {
       value: new Intl.NumberFormat(locale, {
+        // A fixed number of decimals, so 1000 W reads "1.00" beside "0.03"
+        // rather than the bare "1" that looks like a rounded-off integer.
+        minimumFractionDigits: useKilowatts ? 2 : 0,
         maximumFractionDigits: useKilowatts ? 2 : 0,
       }).format(value),
       unit: useKilowatts ? "kW" : "W",
@@ -659,6 +662,10 @@ export class PowerOrbCard extends LitElement {
     const now = fractionalHour(this.now, this.timeZone);
     const beadRadius = live === null ? null : this.radiusFor(now, live);
     const bead = beadRadius === null ? null : polar(now, beadRadius);
+    // The bead is the mark the eye lands on first, so it has to carry the same
+    // verdict as the sentence rather than staying permanently calm.
+    const beadState =
+      live === null ? "" : (this.liveDeparture(Math.floor(now), live) ?? "");
 
     return svg`
       <svg class="dial" viewBox="0 0 ${VIEW} ${VIEW}" role="img"
@@ -685,8 +692,8 @@ export class PowerOrbCard extends LitElement {
         ${this.renderNowBracket(now)}
         ${bead
           ? svg`
-              <circle class="bead-halo" cx=${bead[0]} cy=${bead[1]} r="11" />
-              <circle class="bead" cx=${bead[0]} cy=${bead[1]} r="6" />
+              <circle class=${`bead-halo ${beadState}`} cx=${bead[0]} cy=${bead[1]} r="11" />
+              <circle class=${`bead ${beadState}`} cx=${bead[0]} cy=${bead[1]} r="6" />
             `
           : nothing}
         ${this.baseline
@@ -711,10 +718,16 @@ export class PowerOrbCard extends LitElement {
     const low = this.radiusFor(now, bounds.low);
     const high = this.radiusFor(now, bounds.high);
     if (low === null || high === null) return nothing;
-    const from = polar(now, Math.max(low, RADIUS_IN));
-    const to = polar(now, Math.min(high, RADIUS_OUT));
-    return svg`<line class="now-range" x1=${from[0]} y1=${from[1]}
-      x2=${to[0]} y2=${to[1]} />`;
+    const inner = Math.max(low, RADIUS_IN);
+    const outer = Math.min(high, RADIUS_OUT);
+    // Serifs, because in settled weather the five-minute envelope is far
+    // narrower than the hourly band and a bare line collapses to a dot.
+    const serif = (radius: number) => {
+      const sweep = (5 / radius) * (12 / Math.PI);
+      return `M ${point(polar(now - sweep, radius))} L ${point(polar(now + sweep, radius))}`;
+    };
+    return svg`<path class="now-range"
+      d=${`M ${point(polar(now, inner))} L ${point(polar(now, outer))} ${serif(inner)} ${serif(outer)}`} />`;
   }
 
   private renderStrip(live: number | null) {
@@ -842,6 +855,26 @@ export class PowerOrbCard extends LitElement {
     return describeDeviation(live, this.baseline.hours[hour] ?? null);
   }
 
+  /**
+   * How the day has gone so far, so the card answers the question the plot is
+   * visibly asking rather than only describing the current hour.
+   */
+  private dayNote(): string | null {
+    if (!this.baseline || this.today.length === 0) return null;
+    let above = 0;
+    let below = 0;
+    for (const entry of this.today) {
+      const side = this.departure(entry.hour, entry.watts);
+      if (side === "above") above += 1;
+      if (side === "below") below += 1;
+    }
+    if (above === 0 && below === 0) {
+      return `All ${this.today.length} hours so far ran normal`;
+    }
+    const [count, word] = above >= below ? [above, "above"] : [below, "below"];
+    return `${count} of ${this.today.length} hours so far ran ${word} normal`;
+  }
+
   private summary(live: number | null): string {
     if (live === null) return "Home power unavailable";
     const formatted = this.formatPower(live);
@@ -859,6 +892,7 @@ export class PowerOrbCard extends LitElement {
         ? null
         : powerSnapshotInWatts(this._hass.states, this.channels);
     const selfPowered = snapshot ? powerInsights(snapshot).selfPoweredPercent : null;
+    const dayNote = this.dayNote();
 
     return html`
       <ha-card>
@@ -888,14 +922,15 @@ export class PowerOrbCard extends LitElement {
             title=${deviation ? deviation.sentence : "Baseline not available yet"}
           >
             ${deviation ? deviation.sentence : "Comparing with your normal day"}
+            ${dayNote ? html`<small>${dayNote}</small>` : nothing}
           </p>
 
           <div class="legend" aria-hidden="true">
-            <span class="key band"></span>usual range
-            <span class="key line"></span>today
-            <span class="key line above"></span>above
-            <span class="key line below"></span>below
-            <span class="key dot"></span>now
+            <span class="key-item"><span class="key band"></span>usual</span>
+            <span class="key-item"><span class="key line"></span>today</span>
+            <span class="key-item"><span class="key line above"></span>above</span>
+            <span class="key-item"><span class="key line below"></span>below</span>
+            <span class="key-item"><span class="key dot"></span>now</span>
           </div>
 
           <div class="chips">
@@ -1058,8 +1093,9 @@ export class PowerOrbCard extends LitElement {
       pointer-events: none;
     }
     .now-range {
-      stroke: rgba(255, 255, 255, 0.3);
-      stroke-width: 6;
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.55);
+      stroke-width: 2.5;
       stroke-linecap: round;
     }
     .tick {
@@ -1093,12 +1129,24 @@ export class PowerOrbCard extends LitElement {
     .bead {
       fill: var(--orb-home);
     }
+    .bead.above {
+      fill: var(--orb-above);
+    }
+    .bead.below {
+      fill: var(--orb-below);
+    }
     .bead-halo {
       fill: none;
       stroke: var(--orb-home);
       stroke-width: 2;
       opacity: 0.5;
       animation: pulse 2.4s ease-out infinite;
+    }
+    .bead-halo.above {
+      stroke: var(--orb-above);
+    }
+    .bead-halo.below {
+      stroke: var(--orb-below);
     }
     .reading {
       position: absolute;
@@ -1153,6 +1201,12 @@ export class PowerOrbCard extends LitElement {
     .verdict.unknown {
       color: #9aa0b4;
     }
+    .verdict small {
+      display: block;
+      margin-top: 3px;
+      color: #767b90;
+      font-size: 11px;
+    }
     .legend {
       display: flex;
       align-items: center;
@@ -1165,10 +1219,15 @@ export class PowerOrbCard extends LitElement {
       letter-spacing: 0.06em;
       text-transform: uppercase;
     }
+    .key-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
     .key {
       width: 14px;
       height: 10px;
-      margin-right: 5px;
       display: inline-block;
       vertical-align: middle;
     }

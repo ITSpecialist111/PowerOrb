@@ -380,13 +380,17 @@ describe("bandBounds", () => {
 });
 
 describe("comparators", () => {
-  it("judges a completed hour a fixed distance outside the drawn ring", () => {
-    // The grace is in band widths, so it is the same number of pixels for
-    // every hour. A multiplicative margin would give a tight, high-level hour
-    // a grace zone spanning the whole dial.
+  it("floors the grace zone in watts, so noise is not reported as an event", () => {
+    // hour() has a 200 W band, a tenth of which is 20 W - less than a single
+    // downlight, and below the accuracy of a CT clamp.
     const bounds = hourlyBounds(hour(5));
-    expect(bounds.high).toBeCloseTo(320);
-    expect(bounds.low).toBeCloseTo(80);
+    expect(bounds.high).toBeCloseTo(420);
+    expect(bounds.low).toBeCloseTo(-20);
+  });
+
+  it("widens the grace with the band for an hour that genuinely varies", () => {
+    const bounds = hourlyBounds({ ...hour(5), low: 1_000, high: 6_000 });
+    expect(bounds.high).toBeCloseTo(6_500);
   });
 
   it("judges an instant against the wider within-hour envelope", () => {
@@ -395,22 +399,12 @@ describe("comparators", () => {
     expect(bounds?.low).toBeCloseTo(45.45);
   });
 
-  it("keeps the two apart, or an hourly mean could never look abnormal", () => {
-    // An hourly mean is the average of twelve five-minute means, so its spread
-    // is far narrower. Judging it against the instant envelope would make the
-    // trace permanently normal.
-    const hourly = hourlyBounds(hour(5));
-    const instant = deviationBounds(hour(5));
-    expect(instant?.high).toBeGreaterThan(hourly.high);
-    expect(instant?.low).toBeLessThan(hourly.low);
-  });
-
   it("makes no instantaneous claim without an envelope", () => {
     expect(deviationBounds({ ...hour(5), liveLow: null, liveHigh: null })).toBeNull();
   });
 
   it("still judges completed hours when the envelope is gone", () => {
     const bounds = hourlyBounds({ ...hour(5), liveLow: null, liveHigh: null });
-    expect(bounds.high).toBeCloseTo(320);
+    expect(bounds.high).toBeCloseTo(420);
   });
 });

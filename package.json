@@ -1,6 +1,6 @@
 {
   "name": "power-orb-card",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "description": "A real-time Home Assistant energy visualization card",
   "type": "module",
   "author": "ITSpecialist111",

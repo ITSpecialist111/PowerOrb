@@ -8,8 +8,8 @@ Orb shows you what is happening right now *against your own household's normal
 day*. It draws a 24-hour dial where the angle is the time of day and the radius
 is **how far a reading sits from what that hour usually draws**:
 
-- **The ring** — the range your home usually draws at each hour, from the 10th
-  to the 90th percentile of the last 28 days. Because every hour is normalised
+- **The ring** — the range your home usually draws at each hour, from the 5th
+  to the 95th percentile of the last 28 days. Because every hour is normalised
   onto the same ring, normal is a **circle**.
 - **Today's line** — what you actually drew, hour by hour, from midnight,
   coloured by how each hour compared.
@@ -21,7 +21,8 @@ here both are ordinary, so both sit on the ring, and a departure is a shape the
 eye catches instantly.
 
 Underneath, one sentence: *"30% above the usual range for 19:00–20:00"*, or
-simply *"Normal for 19:00–20:00"*.
+simply *"Normal for 19:00–20:00"* — with a second line summarising how the day
+has gone so far.
 
 It uses the power sensors already configured in Home Assistant's Energy
 dashboard, so it needs no server, access token, or duplicate entity
@@ -78,8 +79,14 @@ is answering two different questions.
 
 | What is judged | Against | Why |
 | --- | --- | --- |
-| A completed hour, drawn as today's line | The spread of hourly means, plus a tenth of a band width | An hourly mean can only sensibly be compared with other hourly means |
+| A completed hour, drawn as today's line | The spread of hourly means, plus a tenth of a band width or 120 W, whichever is larger | An hourly mean can only sensibly be compared with other hourly means |
 | The live reading, drawn as the bead | The spread of five-minute values within past instances of this hour, plus 10% | An instant is not an average; judging it against hourly means would flag every kettle |
+
+The 5th to 95th percentile and the watt floor exist together to keep the base
+rate honest. A 10th-to-90th range puts a fifth of all ordinary hours outside it
+by construction, and a purely proportional margin can put the threshold inside
+sensor noise — a 200 W band would flag a 20 W difference, less than one
+downlight. Together they flag roughly one hour a day rather than four.
 
 The ring is the first of those, so today's line and the ring always agree. The
 second is drawn as a short bracket at the current angle only, where it applies,
@@ -89,10 +96,11 @@ or an induction hob can occasionally tip the verdict. The reported figure is
 measured against the boundary that was actually crossed, not the median.
 
 Today's line is coloured by how each hour compared — teal inside the ring, warm
-above it, cool below — and a tick marks how far. Hours not yet lived are left
-unshaded, so the dial visibly fills through the day. A reading more than six
-band widths out is pinned to the edge of the plot; hover or a screen reader
-recovers the exact figure.
+above it, cool below — and a tick marks how far. The bead takes the same colour
+from its own verdict. Hours not yet lived are left unshaded, so the dial
+visibly fills through the day. A reading more than six band widths above the
+range is pinned to the edge of the plot; hover or a screen reader recovers the
+exact figure.
 
 If recorder has no five-minute detail left, the ring and today's line still
 work and the live verdict is suppressed rather than computed from a

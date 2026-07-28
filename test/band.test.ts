@@ -3,7 +3,8 @@ import {
   BAND_HIGH_UNIT,
   BAND_LOW_UNIT,
   MIN_BAND_WATTS,
-  TAIL_BANDS,
+  TAIL_BANDS_ABOVE,
+  TAIL_BANDS_BELOW,
   bandPosition,
   bandUnit,
   bandWidth,
@@ -63,8 +64,15 @@ describe("bandUnit", () => {
   });
 
   it("reaches the edges at the configured number of band widths", () => {
-    expect(bandUnit(1 + TAIL_BANDS)).toBeCloseTo(1);
-    expect(bandUnit(-TAIL_BANDS)).toBeCloseTo(0);
+    expect(bandUnit(1 + TAIL_BANDS_ABOVE)).toBeCloseTo(1);
+    expect(bandUnit(-TAIL_BANDS_BELOW)).toBeCloseTo(0);
+  });
+
+  it("spends less of the plot below the range, which load can barely reach", () => {
+    // Home load is bounded at zero, so a deep below tail would waste a third
+    // of the radius on readings no household can produce.
+    expect(BAND_LOW_UNIT).toBeLessThan(1 - BAND_HIGH_UNIT);
+    expect(TAIL_BANDS_BELOW).toBeLessThan(TAIL_BANDS_ABOVE);
   });
 
   it("gives a completed hour the same grace on the plot whatever it draws", () => {

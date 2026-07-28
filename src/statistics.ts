@@ -230,11 +230,14 @@ export async function fetchBaseline(
         : null;
     return {
       hour,
-      low: percentile(sortedMeans, 0.1),
+      // A tenth to a ninetieth percentile puts a fifth of all ordinary hours
+      // outside the range by construction, which would flag roughly three or
+      // four hours every day whatever the household did.
+      low: percentile(sortedMeans, 0.05),
       median: percentile(sortedMeans, 0.5),
-      high: percentile(sortedMeans, 0.9),
-      liveLow: sortedLive ? percentile(sortedLive, 0.1) : null,
-      liveHigh: sortedLive ? percentile(sortedLive, 0.9) : null,
+      high: percentile(sortedMeans, 0.95),
+      liveLow: sortedLive ? percentile(sortedLive, 0.05) : null,
+      liveHigh: sortedLive ? percentile(sortedLive, 0.95) : null,
       samples: sortedMeans.length,
     };
   });
@@ -318,7 +321,7 @@ export function bandBounds(band: BaselineHour): { low: number; high: number } {
  */
 export function hourlyBounds(band: BaselineHour): { low: number; high: number } {
   const bounds = bandBounds(band);
-  const slack = bandWidth(bounds) * BAND_MARGIN;
+  const slack = Math.max(bandWidth(bounds) * BAND_MARGIN, MIN_MARGIN_WATTS);
   return { low: bounds.low - slack, high: bounds.high + slack };
 }
 
@@ -389,14 +392,29 @@ export function describeDeviation(
 }
 
 /** Where the usual range sits in the plot, as a fraction of the drawable span. */
-export const BAND_LOW_UNIT = 0.36;
-export const BAND_HIGH_UNIT = 0.64;
-/** How many band widths beyond the range reach the edge of the plot. */
-export const TAIL_BANDS = 6;
+export const BAND_LOW_UNIT = 0.26;
+export const BAND_HIGH_UNIT = 0.58;
+/**
+ * How many band widths beyond the range reach the edge of the plot.
+ *
+ * Asymmetric because home load is bounded at zero: the below tail can never
+ * use more than a band width or two, so giving it six wasted a third of the
+ * radius on readings no household can produce.
+ */
+export const TAIL_BANDS_ABOVE = 6;
+export const TAIL_BANDS_BELOW = 2;
 /** Floor on a band width, so a very tight hour is not infinitely sensitive. */
 export const MIN_BAND_WATTS = 60;
 /** Grace outside the range before a completed hour counts as a departure. */
 export const BAND_MARGIN = 0.1;
+/**
+ * Floor on that grace, in watts.
+ *
+ * A proportional margin alone puts the threshold inside sensor noise for a
+ * tight hour: a 195 W band would flag a 20 W difference, which is less than a
+ * single downlight and below the accuracy of a CT clamp.
+ */
+export const MIN_MARGIN_WATTS = 120;
 
 export function bandWidth(bounds: { low: number; high: number }): number {
   return Math.max(bounds.high - bounds.low, MIN_BAND_WATTS);
@@ -429,12 +447,14 @@ export function bandUnit(position: number): number {
   if (position >= 0 && position <= 1) {
     return BAND_LOW_UNIT + span * position;
   }
-  const knee = Math.asinh(TAIL_BANDS);
   if (position > 1) {
-    const tail = Math.min(1, Math.asinh(position - 1) / knee);
+    const tail = Math.min(
+      1,
+      Math.asinh(position - 1) / Math.asinh(TAIL_BANDS_ABOVE),
+    );
     return BAND_HIGH_UNIT + (1 - BAND_HIGH_UNIT) * tail;
   }
-  const tail = Math.min(1, Math.asinh(-position) / knee);
+  const tail = Math.min(1, Math.asinh(-position) / Math.asinh(TAIL_BANDS_BELOW));
   return BAND_LOW_UNIT - BAND_LOW_UNIT * tail;
 }
 
