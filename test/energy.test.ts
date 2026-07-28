@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  configuredEnergyFlows,
+  discoverEnergyFlows,
   discoverPowerChannels,
   entityPowerInWatts,
+  flowPowerInWatts,
   powerInsights,
   powerSnapshotInWatts,
   totalPowerInWatts,
@@ -27,6 +30,49 @@ describe("discoverPowerChannels", () => {
       { entityId: "sensor.grid_import", multiplier: 1, role: "grid_import" },
       { entityId: "sensor.grid_export", multiplier: -1, role: "grid_export" },
     ]);
+  });
+
+  describe("discoverEnergyFlows", () => {
+    it("groups channels by their role in the energy system", () => {
+      expect(
+        discoverEnergyFlows({
+          energy_sources: [
+            { type: "solar", stat_rate: "sensor.roof_power" },
+            { type: "solar", stat_rate: "sensor.garage_power" },
+            {
+              type: "battery",
+              power_config: {
+                stat_rate_from: "sensor.battery_discharge",
+                stat_rate_to: "sensor.battery_charge",
+              },
+            },
+          ],
+        }),
+      ).toEqual([
+        {
+          kind: "solar",
+          channels: [
+            { entityId: "sensor.roof_power", multiplier: 1, role: "solar" },
+            { entityId: "sensor.garage_power", multiplier: 1, role: "solar" },
+          ],
+        },
+        {
+          kind: "battery",
+          channels: [
+            {
+              entityId: "sensor.battery_discharge",
+              multiplier: 1,
+              role: "battery_discharge",
+            },
+            {
+              entityId: "sensor.battery_charge",
+              multiplier: -1,
+              role: "battery_charge",
+            },
+          ],
+        },
+      ]);
+    });
   });
 
   it("honors the inverted signed power sensor slot", () => {
@@ -80,6 +126,50 @@ describe("discoverPowerChannels", () => {
   });
 });
 
+describe("configuredEnergyFlows", () => {
+  it("maps explicit entity IDs to energy roles", () => {
+    expect(
+      configuredEnergyFlows({
+        solar: ["sensor.roof_power", "sensor.garage_power"],
+        grid: "sensor.grid_power",
+        battery: "sensor.battery_power",
+      }),
+    ).toEqual([
+      {
+        kind: "solar",
+        channels: [
+          { entityId: "sensor.roof_power", multiplier: 1, role: "solar" },
+          { entityId: "sensor.garage_power", multiplier: 1, role: "solar" },
+        ],
+      },
+      {
+        kind: "grid",
+        channels: [
+          { entityId: "sensor.grid_power", multiplier: 1, role: "grid" },
+        ],
+      },
+      {
+        kind: "battery",
+        channels: [
+          { entityId: "sensor.battery_power", multiplier: 1, role: "battery" },
+        ],
+      },
+    ]);
+  });
+
+  it("rejects unknown roles and duplicate assignments", () => {
+    expect(() =>
+      configuredEnergyFlows({ home: "sensor.home_power" }),
+    ).toThrow("entities only supports solar, grid, and battery roles");
+    expect(() =>
+      configuredEnergyFlows({
+        solar: "sensor.shared",
+        grid: "sensor.shared",
+      }),
+    ).toThrow("sensor.shared cannot be assigned to more than one role");
+  });
+});
+
 describe("power calculations", () => {
   it("normalizes supported units to watts", () => {
     expect(
@@ -124,6 +214,29 @@ describe("power calculations", () => {
     ).toBe(1500);
   });
 
+  it("preserves direction for an individual energy flow", () => {
+    expect(
+      flowPowerInWatts(
+        {
+          "sensor.grid_export": {
+            state: "0.8",
+            attributes: { unit_of_measurement: "kW" },
+          },
+        },
+        {
+          kind: "grid",
+          channels: [
+            {
+              entityId: "sensor.grid_export",
+              multiplier: -1,
+              role: "grid_export",
+            },
+          ],
+        },
+      ),
+    ).toBe(-800);
+  });
+
   it("builds a dashboard snapshot from semantic energy channels", () => {
     const states = {
       "sensor.solar": {
@@ -149,7 +262,11 @@ describe("power calculations", () => {
         { entityId: "sensor.solar", multiplier: 1, role: "solar" },
         { entityId: "sensor.grid_import", multiplier: 1, role: "grid_import" },
         { entityId: "sensor.grid_export", multiplier: -1, role: "grid_export" },
-        { entityId: "sensor.battery_charge", multiplier: -1, role: "battery_charge" },
+        {
+          entityId: "sensor.battery_charge",
+          multiplier: -1,
+          role: "battery_charge",
+        },
       ]),
     ).toEqual({
       solar: 4500,

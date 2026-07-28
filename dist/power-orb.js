@@ -254,22 +254,22 @@ var v = class extends HTMLElement {
 v.elementStyles = [], v.shadowRootOptions = { mode: "open" }, v[m("elementProperties")] = /* @__PURE__ */ new Map(), v[m("finalized")] = /* @__PURE__ */ new Map(), ie?.({ ReactiveElement: v }), (f.reactiveElementVersions ??= []).push("2.1.2");
 //#endregion
 //#region node_modules/lit-html/lit-html.js
-var y = globalThis, b = (e) => e, x = y.trustedTypes, ae = x ? x.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, S = "$lit$", C = `lit$${Math.random().toFixed(9).slice(2)}$`, w = "?" + C, oe = `<${w}>`, T = document, E = () => T.createComment(""), D = (e) => e === null || typeof e != "object" && typeof e != "function", O = Array.isArray, se = (e) => O(e) || typeof e?.[Symbol.iterator] == "function", k = "[ 	\n\f\r]", A = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ce = /-->/g, j = />/g, M = RegExp(`>|${k}(?:([^\\s"'>=/]+)(${k}*=${k}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), le = /'/g, ue = /"/g, de = /^(?:script|style|textarea|title)$/i, N = (e) => (t, ...n) => ({
+var y = globalThis, b = (e) => e, x = y.trustedTypes, S = x ? x.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, C = "$lit$", w = `lit$${Math.random().toFixed(9).slice(2)}$`, ae = "?" + w, oe = `<${ae}>`, T = document, E = () => T.createComment(""), D = (e) => e === null || typeof e != "object" && typeof e != "function", O = Array.isArray, se = (e) => O(e) || typeof e?.[Symbol.iterator] == "function", k = "[ 	\n\f\r]", A = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ce = /-->/g, le = />/g, j = RegExp(`>|${k}(?:([^\\s"'>=/]+)(${k}*=${k}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), ue = /'/g, de = /"/g, M = /^(?:script|style|textarea|title)$/i, fe = (e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
-}), P = N(1), fe = N(2), F = Symbol.for("lit-noChange"), I = Symbol.for("lit-nothing"), L = /* @__PURE__ */ new WeakMap(), R = T.createTreeWalker(T, 129);
+}), N = fe(1), P = fe(2), F = Symbol.for("lit-noChange"), I = Symbol.for("lit-nothing"), L = /* @__PURE__ */ new WeakMap(), R = T.createTreeWalker(T, 129);
 function z(e, t) {
 	if (!O(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
-	return ae === void 0 ? t : ae.createHTML(t);
+	return S === void 0 ? t : S.createHTML(t);
 }
 var pe = (e, t) => {
 	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = A;
 	for (let t = 0; t < n; t++) {
 		let n = e[t], s, c, l = -1, u = 0;
-		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === A ? c[1] === "!--" ? o = ce : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = M) : (de.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = M) : o = j : o === M ? c[0] === ">" ? (o = i ?? A, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? M : c[3] === "\"" ? ue : le) : o === ue || o === le ? o = M : o === ce || o === j ? o = A : (o = M, i = void 0);
-		let d = o === M && e[t + 1].startsWith("/>") ? " " : "";
-		a += o === A ? n + oe : l >= 0 ? (r.push(s), n.slice(0, l) + S + n.slice(l) + C + d) : n + C + (l === -2 ? t : d);
+		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === A ? c[1] === "!--" ? o = ce : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = j) : (M.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = j) : o = le : o === j ? c[0] === ">" ? (o = i ?? A, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? j : c[3] === "\"" ? de : ue) : o === de || o === ue ? o = j : o === ce || o === le ? o = A : (o = j, i = void 0);
+		let d = o === j && e[t + 1].startsWith("/>") ? " " : "";
+		a += o === A ? n + oe : l >= 0 ? (r.push(s), n.slice(0, l) + C + n.slice(l) + w + d) : n + w + (l === -2 ? t : d);
 	}
 	return [z(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
 }, B = class e {
@@ -283,8 +283,8 @@ var pe = (e, t) => {
 		}
 		for (; (i = R.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
-				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(S)) {
-					let t = u[o++], n = i.getAttribute(e).split(C), r = /([.?@])?(.*)/.exec(t);
+				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(C)) {
+					let t = u[o++], n = i.getAttribute(e).split(w), r = /([.?@])?(.*)/.exec(t);
 					c.push({
 						type: 1,
 						index: a,
@@ -292,12 +292,12 @@ var pe = (e, t) => {
 						strings: n,
 						ctor: r[1] === "." ? he : r[1] === "?" ? ge : r[1] === "@" ? _e : U
 					}), i.removeAttribute(e);
-				} else e.startsWith(C) && (c.push({
+				} else e.startsWith(w) && (c.push({
 					type: 6,
 					index: a
 				}), i.removeAttribute(e));
-				if (de.test(i.tagName)) {
-					let e = i.textContent.split(C), t = e.length - 1;
+				if (M.test(i.tagName)) {
+					let e = i.textContent.split(w), t = e.length - 1;
 					if (t > 0) {
 						i.textContent = x ? x.emptyScript : "";
 						for (let n = 0; n < t; n++) i.append(e[n], E()), R.nextNode(), c.push({
@@ -307,16 +307,16 @@ var pe = (e, t) => {
 						i.append(e[t], E());
 					}
 				}
-			} else if (i.nodeType === 8) if (i.data === w) c.push({
+			} else if (i.nodeType === 8) if (i.data === ae) c.push({
 				type: 2,
 				index: a
 			});
 			else {
 				let e = -1;
-				for (; (e = i.data.indexOf(C, e + 1)) !== -1;) c.push({
+				for (; (e = i.data.indexOf(w, e + 1)) !== -1;) c.push({
 					type: 7,
 					index: a
-				}), e += C.length - 1;
+				}), e += w.length - 1;
 			}
 			a++;
 		}
@@ -541,7 +541,7 @@ var Se = (e) => (t, n) => {
 	}
 	throw Error("Unsupported decorator location: " + r);
 };
-function K(e) {
+function Te(e) {
 	return (t, n) => typeof n == "object" ? we(e, t, n) : ((e, t, n) => {
 		let r = t.hasOwnProperty(n);
 		return t.constructor.createProperty(n, e), r ? Object.getOwnPropertyDescriptor(t, n) : void 0;
@@ -549,8 +549,8 @@ function K(e) {
 }
 //#endregion
 //#region node_modules/@lit/reactive-element/decorators/state.js
-function q(e) {
-	return K({
+function K(e) {
+	return Te({
 		...e,
 		state: !0,
 		attribute: !1
@@ -558,14 +558,14 @@ function q(e) {
 }
 //#endregion
 //#region src/energy.ts
-function J(e) {
+function q(e) {
 	return typeof e == "object" && !!e;
 }
-function Y(e, t) {
+function J(e, t) {
 	let n = e[t];
 	return typeof n == "string" && n.length > 0 ? n : void 0;
 }
-function X(e, t, n, r) {
+function Y(e, t, n, r) {
 	if (!t) return;
 	let i = e.find((e) => e.entityId === t && e.role === r);
 	i ? i.multiplier += n : e.push({
@@ -574,34 +574,74 @@ function X(e, t, n, r) {
 		role: r
 	});
 }
-function Te(e, t, n) {
-	let r = Y(t, "stat_rate"), i = Y(t, "stat_rate_inverted");
+function X(e, t, n) {
+	let r = J(t, "stat_rate"), i = J(t, "stat_rate_inverted");
 	if (r || i) {
-		X(e, r, 1, n.net), X(e, i, -1, n.net);
+		Y(e, r, 1, n.net), Y(e, i, -1, n.net);
 		return;
 	}
-	X(e, Y(t, "stat_rate_from"), 1, n.positive), X(e, Y(t, "stat_rate_to"), -1, n.negative);
+	Y(e, J(t, "stat_rate_from"), 1, n.positive), Y(e, J(t, "stat_rate_to"), -1, n.negative);
 }
 function Ee(e) {
-	let t = [];
+	let t = /* @__PURE__ */ new Map();
 	for (let n of e.energy_sources ?? []) {
-		if (!J(n)) continue;
-		let e = Y(n, "type"), r = J(n.power_config) ? n.power_config : n;
-		if (e === "solar") X(t, Y(n, "stat_rate"), 1, "solar");
+		if (!q(n)) continue;
+		let e = J(n, "type");
+		if (e !== "solar" && e !== "grid" && e !== "battery") continue;
+		let r = t.get(e) ?? [];
+		t.set(e, r);
+		let i = q(n.power_config) ? n.power_config : n;
+		if (e === "solar") Y(r, J(n, "stat_rate"), 1, "solar");
 		else if (e === "grid") {
-			let e = Y(n, "stat_rate");
-			e ? X(t, e, 1, "grid") : Te(t, r, {
+			let e = J(n, "stat_rate");
+			e ? Y(r, e, 1, "grid") : X(r, i, {
 				net: "grid",
 				positive: "grid_import",
 				negative: "grid_export"
 			});
-		} else e === "battery" && Te(t, r, {
+		} else e === "battery" && X(r, i, {
 			net: "battery",
 			positive: "battery_discharge",
 			negative: "battery_charge"
 		});
 	}
-	return t.filter((e) => e.multiplier !== 0);
+	return [...t.entries()].map(([e, t]) => ({
+		kind: e,
+		channels: t.filter((e) => e.multiplier !== 0)
+	})).filter((e) => e.channels.length > 0);
+}
+function De(e) {
+	if (!q(e)) throw Error("entities must map solar, grid, or battery to entity IDs");
+	let t = [
+		"solar",
+		"grid",
+		"battery"
+	];
+	if (Object.keys(e).some((e) => !t.includes(e))) throw Error("entities only supports solar, grid, and battery roles");
+	let n = /* @__PURE__ */ new Set(), r = [];
+	for (let i of t) {
+		let t = e[i];
+		if (t === void 0) continue;
+		let a = typeof t == "string" ? [t] : t;
+		if (!Array.isArray(a) || a.length === 0 || a.some((e) => typeof e != "string" || !e)) throw Error(`${i} must contain one or more entity IDs`);
+		for (let e of a) {
+			if (n.has(e)) throw Error(`${e} cannot be assigned to more than one role`);
+			n.add(e);
+		}
+		r.push({
+			kind: i,
+			channels: a.map((e) => ({
+				entityId: e,
+				multiplier: 1,
+				role: i
+			}))
+		});
+	}
+	if (r.length === 0) throw Error("entities must define at least one energy role");
+	return r;
+}
+function Oe(e) {
+	return Ee(e).flatMap((e) => e.channels);
 }
 function Z(e) {
 	if (!e) return null;
@@ -610,7 +650,7 @@ function Z(e) {
 	let n = e.attributes.unit_of_measurement?.toLowerCase();
 	return n === "kw" ? t * 1e3 : n === "mw" ? t * 1e6 : n === "w" || n === void 0 ? t : null;
 }
-function De(e, t) {
+function ke(e, t) {
 	let n = 0, r = 0;
 	for (let i of t) {
 		let t = Z(e[i.entityId]);
@@ -618,7 +658,15 @@ function De(e, t) {
 	}
 	return r > 0 ? Math.max(0, n) : null;
 }
-function Oe(e, t) {
+function Ae(e, t) {
+	let n = 0, r = 0;
+	for (let i of t.channels) {
+		let t = Z(e[i.entityId]);
+		t !== null && (n += t * i.multiplier, r += 1);
+	}
+	return r > 0 ? n : null;
+}
+function je(e, t) {
 	let n = {
 		solar: 0,
 		gridImport: 0,
@@ -636,11 +684,11 @@ function Oe(e, t) {
 	}
 	return n.activeChannels === 0 ? null : (n.homeLoad = Math.max(0, n.solar + n.gridImport + n.batteryDischarge - n.gridExport - n.batteryCharge), n);
 }
-function ke(e) {
+function Me(e) {
 	return Math.round(Math.min(100, Math.max(0, e * 100)));
 }
-function Ae(e) {
-	let t = e.gridImport - e.gridExport, n = e.batteryDischarge - e.batteryCharge, r = e.homeLoad > 0 ? ke((e.homeLoad - e.gridImport) / e.homeLoad) : 100, i = e.solar > 0 ? ke((e.solar - e.gridExport) / e.solar) : 0, a = "Waiting for enough live energy data.";
+function Ne(e) {
+	let t = e.gridImport - e.gridExport, n = e.batteryDischarge - e.batteryCharge, r = e.homeLoad > 0 ? Me((e.homeLoad - e.gridImport) / e.homeLoad) : 100, i = e.solar > 0 ? Me((e.solar - e.gridExport) / e.solar) : 0, a = "Waiting for enough live energy data.";
 	return e.gridExport > 250 ? a = "Solar surplus now: run flexible loads or charge storage." : e.gridImport > 500 && e.solar > 0 ? a = "Importing from grid: shift flexible loads toward brighter periods." : e.batteryCharge > 250 ? a = "Battery is charging: preserve stored energy for the evening peak." : e.batteryDischarge > 250 ? a = "Battery is covering demand: keep heavy loads staggered." : e.solar > 0 && (a = "Solar is covering the home with minimal grid movement."), {
 		selfPoweredPercent: r,
 		solarUsedPercent: i,
@@ -659,9 +707,9 @@ function Q(e, t, n, r) {
 }
 //#endregion
 //#region src/power-orb-card.ts
-var je = 300 * 1e3, $ = class extends G {
+var Pe = 300 * 1e3, $ = class extends G {
 	constructor(...e) {
-		super(...e), this.channels = [], this.loading = !0, this.samples = [], this.config = { type: "custom:power-orb" }, this.connectionGeneration = 0, this.lastSampleAt = 0;
+		super(...e), this.channels = [], this.flows = [], this.loading = !0, this.samples = [], this.config = { type: "custom:power-orb" }, this.connectionGeneration = 0, this.lastSampleAt = 0;
 	}
 	set hass(e) {
 		this._hass = e, this.captureSample(), this.requestUpdate();
@@ -672,11 +720,13 @@ var je = 300 * 1e3, $ = class extends G {
 	setConfig(e) {
 		if (!e || e.type !== "custom:power-orb") throw Error("Power Orb requires type: custom:power-orb");
 		if (e.max_power !== void 0 && e.max_power <= 0) throw Error("max_power must be greater than zero");
+		if (e.entity && e.entities !== void 0) throw Error("Configure either entity or entities, not both");
+		let t = e.entities === void 0 ? [] : De(e.entities);
 		this.config = e, this.channels = e.entity ? [{
 			entityId: e.entity,
 			multiplier: 1,
 			role: "grid"
-		}] : [], this.loading = !e.entity, this.error = void 0, this.samples = [], this.disconnectData(), this.isConnected && this._hass && this.connect();
+		}] : t.flatMap((e) => e.channels), this.flows = t, this.loading = !e.entity && e.entities === void 0, this.error = void 0, this.samples = [], this.disconnectData(), this.isConnected && this._hass && this.connect();
 	}
 	static getStubConfig() {
 		return { type: "custom:power-orb" };
@@ -699,7 +749,7 @@ var je = 300 * 1e3, $ = class extends G {
 		this.disconnectData(), super.disconnectedCallback();
 	}
 	connect() {
-		if (!this._hass || this.config.entity) return Promise.resolve();
+		if (!this._hass || this.config.entity || this.config.entities !== void 0) return Promise.resolve();
 		if (this.connecting) return this.connecting;
 		let e = this.connectionGeneration;
 		return this.connecting = this.startDiscovery(e).finally(() => {
@@ -708,7 +758,7 @@ var je = 300 * 1e3, $ = class extends G {
 	}
 	async startDiscovery(e) {
 		if (await this.loadEnergyPreferences(), !(e !== this.connectionGeneration || !this._hass)) {
-			this.refreshTimer = window.setInterval(() => void this.loadEnergyPreferences(), je);
+			this.refreshTimer = window.setInterval(() => void this.loadEnergyPreferences(), Pe);
 			try {
 				let t = await this._hass.connection.subscribeEvents(() => void this.loadEnergyPreferences(), "power_orb_refresh");
 				e === this.connectionGeneration ? this.unsubscribe = t : t();
@@ -719,11 +769,11 @@ var je = 300 * 1e3, $ = class extends G {
 		this.connectionGeneration += 1, this.unsubscribe?.(), this.unsubscribe = void 0, this.refreshTimer !== void 0 && (window.clearInterval(this.refreshTimer), this.refreshTimer = void 0), this.connecting = void 0;
 	}
 	async loadEnergyPreferences() {
-		if (!(!this._hass || this.config.entity)) {
+		if (!(!this._hass || this.config.entity || this.config.entities !== void 0)) {
 			this.loading = !0;
 			try {
 				let e = await this._hass.callWS({ type: "energy/get_prefs" });
-				this.channels = Ee(e), this.error = this.channels.length === 0 ? "Add real-time power sensors to your Energy dashboard." : void 0, this.captureSample(!0);
+				this.flows = Ee(e), this.channels = Oe(e), this.error = this.channels.length === 0 ? "Add real-time power sensors to your Energy dashboard." : void 0, this.captureSample(!0);
 			} catch {
 				this.error = "Power Orb could not read the Energy dashboard.";
 			} finally {
@@ -732,10 +782,10 @@ var je = 300 * 1e3, $ = class extends G {
 		}
 	}
 	currentPower() {
-		return this._hass ? this.config.entity ? Z(this._hass.states[this.config.entity]) : De(this._hass.states, this.channels) : null;
+		return this._hass ? this.config.entity ? Z(this._hass.states[this.config.entity]) : ke(this._hass.states, this.channels) : null;
 	}
 	currentSnapshot() {
-		return !this._hass || this.config.entity ? null : Oe(this._hass.states, this.channels);
+		return !this._hass || this.config.entity ? null : je(this._hass.states, this.channels);
 	}
 	captureSample(e = !1) {
 		let t = Date.now();
@@ -753,7 +803,7 @@ var je = 300 * 1e3, $ = class extends G {
 	sparkline() {
 		if (this.samples.length < 2) return I;
 		let e = Math.max(...this.samples, 1), t = Math.max(this.samples.length - 1, 1);
-		return fe`
+		return P`
       <svg class="sparkline" viewBox="0 0 100 42" preserveAspectRatio="none"
         role="img" aria-label="Recent power trend">
         <polyline points=${this.samples.map((n, r) => {
@@ -763,105 +813,123 @@ var je = 300 * 1e3, $ = class extends G {
       </svg>
     `;
 	}
-	flowStyle(e, t) {
-		return `--flow:${t > 0 ? Math.min(1, Math.max(0, e / t)) : 0}`;
+	flowValue(e) {
+		if (!this._hass) return null;
+		let t = this.flows.find((t) => t.kind === e);
+		return t ? Ae(this._hass.states, t) : null;
 	}
-	metric(e, t, n) {
-		let r = this.formatPower(t);
-		return P`
-      <div class=${`metric ${t > 0 ? "active" : ""}`}>
-        <span>${e}</span>
-        <strong>${r.value}<small>${r.unit}</small></strong>
-        <em>${n}</em>
+	flowLabel(e, t) {
+		return Math.abs(t) < 1 ? "idle" : e === "grid" ? t > 0 ? "importing" : "exporting" : e === "battery" ? t > 0 ? "supplying" : "charging" : t > 0 ? "generating" : "idle";
+	}
+	renderFlow(e) {
+		if (!this.flows.find((t) => t.kind === e)) return I;
+		let t = this.flowValue(e), n = t === null ? void 0 : this.formatPower(Math.abs(t)), r = t !== null && Math.abs(t) >= 1, i = r ? Math.max(.9, 4.5 - Math.min(Math.abs(t), 1e4) / 2800) : 0, a = t !== null && t < 0 ? "outward" : "inward", o = {
+			solar: "Solar",
+			grid: "Grid",
+			battery: "Battery"
+		};
+		return N`
+      <div
+        class=${`flow flow-${e} ${r ? a : "idle"}`}
+        style=${`--flow-speed:${i}s`}
+        aria-label=${`${o[e]} ${n ? `${n.value} ${n.unit}, ${this.flowLabel(e, t ?? 0)}` : "unavailable"}`}
+      >
+        <span class="flow-icon" aria-hidden="true"></span>
+        <span class="flow-copy">
+          <small>${o[e]}</small>
+          <strong
+            >${n ? N`${n.value}<em>${n.unit}</em>` : "ÔÇö"}</strong
+          >
+          <span>${t === null ? "unavailable" : this.flowLabel(e, t)}</span>
+        </span>
       </div>
     `;
 	}
 	render() {
-		let e = this.currentPower(), t = this.config.max_power ?? Math.max(...this.samples, e ?? 0, 5e3), n = e === null ? 0 : Math.min(1, Math.max(.08, e / t)), r = e === null ? void 0 : this.formatPower(e), i = this.currentSnapshot(), a = i ? Ae(i) : void 0, o = a?.netGridWatts ?? 0, s = a?.netBatteryWatts ?? 0;
-		return P`
+		let e = this.currentPower(), t = this.config.max_power ?? Math.max(...this.samples, e ?? 0, 5e3), n = e === null ? 0 : Math.min(1, Math.max(.08, e / t)), r = e === null ? void 0 : this.formatPower(e), i = this.currentSnapshot(), a = i ? Ne(i) : void 0;
+		return N`
       <ha-card>
         <div class="card" style=${`--intensity:${n}`}>
           <header>
-            <span>${this.config.name ?? "Power Orb"}</span>
+            <div>
+              <small>Energy constellation</small>
+              <span>${this.config.name ?? "Power Orb"}</span>
+            </div>
             <span class="status" title="Live data">
               <i class=${e === null ? "offline" : ""}></i> live
             </span>
           </header>
 
-          ${i ? P`
-                <section class="dashboard" aria-label="Live energy dashboard">
-                  <div class="sky" aria-hidden="true">
-                    <div class="sun"></div>
-                    <svg class="arc" viewBox="0 0 260 100" preserveAspectRatio="none">
-                      <path d="M12 88 C 70 8, 188 8, 248 88"></path>
-                    </svg>
-                  </div>
+          <div class=${`constellation ${this.config.entity ? "direct" : ""}`}>
+            <svg
+              class="flow-map"
+              viewBox="0 0 600 360"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              ${[
+			"solar",
+			"grid",
+			"battery"
+		].map((e) => {
+			if (!this.flows.some((t) => t.kind === e)) return I;
+			let t = {
+				solar: "M 105 78 C 185 78, 205 180, 300 180",
+				grid: "M 495 78 C 415 78, 395 180, 300 180",
+				battery: "M 105 286 C 185 286, 205 180, 300 180"
+			}, n = this.flowValue(e), r = n !== null && Math.abs(n) >= 1, i = n !== null && n < 0 ? "outward" : "inward", a = r ? Math.max(.9, 4.5 - Math.min(Math.abs(n), 1e4) / 2800) : 0;
+			return P`
+                    <path class=${`track ${e}`} d=${t[e]}></path>
+                    <path
+                      class=${`energy ${e} ${r ? i : "idle"}`}
+                      style=${`--flow-speed:${a}s`}
+                      d=${t[e]}
+                    ></path>
+                  `;
+		})}
+            </svg>
 
-                  <div class="flow flow-solar ${i.solar > 0 ? "active" : ""}" style=${this.flowStyle(i.solar, t)}></div>
-                  <div class="flow flow-grid ${o === 0 ? "" : "active"}" style=${this.flowStyle(Math.abs(o), t)}></div>
-                  <div class="flow flow-battery ${s === 0 ? "" : "active"}" style=${this.flowStyle(Math.abs(s), t)}></div>
+            ${this.config.entity ? I : N`
+                  ${this.renderFlow("solar")}
+                  ${this.renderFlow("grid")}
+                  ${this.renderFlow("battery")}
+                `}
 
-                  <div class="node solar-node">
-                    <span>Solar</span>
-                    <strong>${this.formatPower(i.solar).value}<small>${this.formatPower(i.solar).unit}</small></strong>
-                  </div>
-                  <div class="node home-node">
-                    <span>Home</span>
-                    <strong>${this.formatPower(i.homeLoad).value}<small>${this.formatPower(i.homeLoad).unit}</small></strong>
-                  </div>
-                  <div class="node grid-node">
-                    <span>Grid</span>
-                    <strong>${this.formatPower(Math.abs(o)).value}<small>${this.formatPower(Math.abs(o)).unit}</small></strong>
-                  </div>
-                  <div class="node battery-node">
-                    <span>Battery</span>
-                    <strong>${this.formatPower(Math.abs(s)).value}<small>${this.formatPower(Math.abs(s)).unit}</small></strong>
-                  </div>
-                </section>
+            <div class="home">
+              <div class="orb" aria-hidden="true">
+                <div class="facet"></div>
+                <div class="core"></div>
+                <div class="ring ring-one"></div>
+                <div class="ring ring-two"></div>
+              </div>
+              <div class="reading" aria-live="polite">
+                <small>Home</small>
+                ${r ? N`<strong>${r.value}</strong
+                      ><span>${r.unit}</span>` : N`<strong>ÔÇö</strong>`}
+                <em>live demand</em>
+              </div>
+            </div>
+          </div>
 
-                <section class="metrics" aria-label="Energy source details">
-                  ${this.metric("Solar", i.solar, "production")}
-                  ${this.metric("Grid", Math.abs(o), o < 0 ? "exporting" : o > 0 ? "importing" : "idle")}
-                  ${this.metric("Battery", Math.abs(s), s < 0 ? "charging" : s > 0 ? "discharging" : "idle")}
-                  ${this.metric("Home", i.homeLoad, "estimated load")}
-                </section>
-
+          <div class="trend">
+            <span>60-second demand trace</span>
+            ${this.sparkline()}
+          </div>
+          ${a ? N`
                 <section class="insights" aria-label="Automatic energy insights">
                   <div>
                     <span>Self powered</span>
-                    <strong>${a?.selfPoweredPercent ?? 0}<small>%</small></strong>
+                    <strong>${a.selfPoweredPercent}<small>%</small></strong>
                   </div>
                   <div>
                     <span>Solar used</span>
-                    <strong>${a?.solarUsedPercent ?? 0}<small>%</small></strong>
+                    <strong>${a.solarUsedPercent}<small>%</small></strong>
                   </div>
-                  <p>${a?.recommendation}</p>
+                  <p>${a.recommendation}</p>
                 </section>
-              ` : P`
-                <div class="visual">
-                  <div class="orb" aria-hidden="true">
-                    <div class="core"></div>
-                    <div class="ring ring-one"></div>
-                    <div class="ring ring-two"></div>
-                  </div>
-                  <div class="reading" aria-live="polite">
-                    ${r ? P`<strong>${r.value}</strong
-                          ><span>${r.unit}</span>` : P`<strong>—</strong>`}
-                    <small>live power</small>
-                  </div>
-                </div>
-              `}
-
-          <div class="trend">
-            <div class="trend-label">
-              <span>Recent load</span>
-              ${r ? P`<strong>${r.value}<small>${r.unit}</small></strong>` : I}
-            </div>
-            ${this.sparkline()}
-          </div>
-
-          ${this.loading ? P`<p class="message">Discovering Energy dashboard…</p>` : this.error ? P`<p class="message error">${this.error}</p>` : P`<p class="message">
-                  ${this.config.entity ? this.config.entity : `${this.channels.length} Energy dashboard ${this.channels.length === 1 ? "sensor" : "sensors"} mapped automatically`}
+              ` : I}
+          ${this.loading ? N`<p class="message">Discovering Energy dashboardÔÇª</p>` : this.error ? N`<p class="message error">${this.error}</p>` : N`<p class="message">
+                  ${this.config.entity ? this.config.entity : `${this.channels.length} live ${this.channels.length === 1 ? "sensor" : "sensors"}`}
                 </p>`}
         </div>
       </ha-card>
@@ -871,29 +939,65 @@ var je = 300 * 1e3, $ = class extends G {
 		this.styles = o`
     :host {
       display: block;
+      --orb-solar: #ffc857;
+      --orb-grid: #68a7ff;
+      --orb-battery: #b68cff;
+      --orb-home: #72f5dc;
     }
     ha-card {
       overflow: hidden;
       background:
-        radial-gradient(circle at 50% 35%, rgba(23, 104, 122, 0.24), transparent 45%),
-        var(--ha-card-background, var(--card-background-color, #10161d));
-      color: var(--primary-text-color, #f4fbff);
+        radial-gradient(circle at 50% 45%, rgba(45, 120, 126, 0.15), transparent 35%),
+        radial-gradient(circle at 8% 0%, rgba(95, 68, 132, 0.16), transparent 34%),
+        linear-gradient(145deg, #11121a, #08090e 60%, #0d1018);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--primary-text-color, #f7f8ff);
     }
     .card {
-      min-height: 430px;
-      padding: 20px;
+      min-height: 500px;
+      padding: 22px;
       position: relative;
       box-sizing: border-box;
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.22;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.32) 0.5px, transparent 0.5px);
+      background-size: 7px 7px;
+      mask-image: linear-gradient(to bottom, black, transparent 70%);
     }
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 18px;
-      font-weight: 600;
+      position: relative;
+      z-index: 2;
+    }
+    header div {
+      display: grid;
+      gap: 4px;
+    }
+    header div > small {
+      color: #8f93a8;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+    header div > span {
+      font-size: 19px;
+      font-weight: 650;
+      letter-spacing: -0.02em;
     }
     .status {
-      color: var(--secondary-text-color, #aab8c2);
+      padding: 6px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.035);
+      color: #a7abbd;
       font-size: 11px;
       font-weight: 500;
       letter-spacing: 0.12em;
@@ -905,44 +1009,170 @@ var je = 300 * 1e3, $ = class extends G {
       height: 7px;
       margin-right: 5px;
       border-radius: 50%;
-      background: #44e0a1;
-      box-shadow: 0 0 8px #44e0a1;
+      background: var(--orb-home);
+      box-shadow: 0 0 8px var(--orb-home);
     }
     .status i.offline {
       background: #7f8b93;
       box-shadow: none;
     }
-    .visual {
-      height: 205px;
-      display: grid;
-      place-items: center;
+    .constellation {
+      height: 350px;
+      margin-top: 8px;
       position: relative;
     }
-    .orb {
-      width: 156px;
-      height: 156px;
+    .constellation.direct {
+      display: grid;
+      place-items: center;
+    }
+    .flow-map {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      inset: 0;
+      overflow: visible;
+    }
+    .flow-map path {
+      fill: none;
+      vector-effect: non-scaling-stroke;
+    }
+    .flow-map .track {
+      stroke: rgba(255, 255, 255, 0.08);
+      stroke-width: 2;
+    }
+    .flow-map .energy {
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-dasharray: 1 14;
+      animation: current var(--flow-speed) linear infinite;
+      filter: drop-shadow(0 0 5px currentColor);
+    }
+    .flow-map .energy.inward {
+      animation-direction: reverse;
+    }
+    .flow-map .energy.idle {
+      opacity: 0.2;
+      animation: none;
+    }
+    .flow-map .solar { color: var(--orb-solar); stroke: var(--orb-solar); }
+    .flow-map .grid { color: var(--orb-grid); stroke: var(--orb-grid); }
+    .flow-map .battery { color: var(--orb-battery); stroke: var(--orb-battery); }
+    .flow {
+      width: 116px;
+      min-height: 68px;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      position: absolute;
+      z-index: 2;
+      box-sizing: border-box;
+      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+      border-radius: 16px;
+      background: rgba(18, 20, 30, 0.76);
+      box-shadow: inset 0 1px rgba(255, 255, 255, 0.055), 0 14px 35px rgba(0, 0, 0, 0.22);
+      backdrop-filter: blur(12px);
+    }
+    .flow-solar,
+    .flow-grid,
+    .flow-battery {
+      transform: translate(-50%, -50%);
+    }
+    .flow-solar { top: 21.67%; left: 17.5%; color: var(--orb-solar); }
+    .flow-grid { top: 21.67%; left: 82.5%; color: var(--orb-grid); }
+    .flow-battery { top: 79.44%; left: 17.5%; color: var(--orb-battery); }
+    .flow-icon {
+      width: 12px;
+      height: 12px;
+      flex: 0 0 auto;
+      border: 2px solid currentColor;
+      border-radius: 50%;
+      box-shadow: 0 0 13px currentColor;
+    }
+    .flow-battery .flow-icon {
+      border-radius: 3px;
+    }
+    .flow-grid .flow-icon {
+      transform: rotate(45deg);
+      border-radius: 2px;
+    }
+    .flow-copy {
+      min-width: 0;
+      display: grid;
+    }
+    .flow-copy small,
+    .flow-copy > span {
+      color: #8f93a8;
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .flow-copy strong {
+      margin: 2px 0;
+      color: #f7f8ff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 16px;
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+    }
+    .flow-copy em {
+      margin-left: 3px;
+      color: currentColor;
+      font-size: 9px;
+      font-style: normal;
+    }
+    .home {
+      width: 174px;
+      height: 174px;
+      display: grid;
+      place-items: center;
+      position: absolute;
+      z-index: 3;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .direct .home {
       position: relative;
+      left: auto;
+      top: auto;
+      transform: none;
+    }
+    .orb {
+      width: 146px;
+      height: 146px;
+      position: absolute;
       border-radius: 50%;
       background:
-        radial-gradient(circle at 42% 38%, rgba(255, 255, 255, 0.9), transparent 5%),
-        radial-gradient(circle at 50% 50%, #8cf7ee 0%, #20b8ca 30%, #086177 68%, #032d3c 100%);
+        linear-gradient(145deg, rgba(255, 255, 255, 0.12), transparent 38%),
+        radial-gradient(circle at 45% 42%, #26363c 0%, #111b22 44%, #06090d 76%);
+      border: 1px solid rgba(164, 255, 238, 0.24);
       box-shadow:
-        0 0 calc(18px + 36px * var(--intensity)) rgba(41, 218, 222, calc(0.2 + 0.55 * var(--intensity))),
-        inset -18px -16px 30px rgba(0, 12, 28, 0.55);
+        0 0 calc(12px + 30px * var(--intensity)) rgba(85, 234, 211, calc(0.14 + 0.36 * var(--intensity))),
+        inset -22px -18px 34px rgba(0, 0, 0, 0.62);
       transform: scale(calc(0.94 + 0.06 * var(--intensity)));
       transition: box-shadow 0.8s ease, transform 0.8s ease;
+    }
+    .facet {
+      position: absolute;
+      inset: 9%;
+      border-radius: 42% 58% 48% 52%;
+      background:
+        linear-gradient(32deg, transparent 48%, rgba(145, 255, 235, 0.08) 49%, transparent 51%),
+        linear-gradient(145deg, transparent 47%, rgba(255, 255, 255, 0.07) 48%, transparent 50%);
+      transform: rotate(14deg);
     }
     .core {
       position: absolute;
       inset: 18%;
       border-radius: 50%;
-      border: 1px solid rgba(177, 255, 250, 0.35);
+      border: 1px solid rgba(155, 255, 237, 0.28);
       animation: breathe 3s ease-in-out infinite;
     }
     .ring {
       position: absolute;
       inset: -12px;
-      border: 1px solid rgba(77, 225, 232, 0.35);
+      border: 1px solid rgba(114, 245, 220, 0.3);
       border-radius: 50%;
       transform: rotateX(68deg) rotateZ(12deg);
     }
@@ -959,10 +1189,11 @@ var je = 300 * 1e3, $ = class extends G {
       align-items: baseline;
       gap: 5px;
       text-align: center;
-      text-shadow: 0 2px 12px #002b37;
+      text-shadow: 0 2px 12px #001b18;
     }
     .reading strong {
-      font-size: 35px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 31px;
       line-height: 1;
       font-variant-numeric: tabular-nums;
     }
@@ -970,12 +1201,30 @@ var je = 300 * 1e3, $ = class extends G {
       font-size: 15px;
       font-weight: 600;
     }
-    .reading small {
+    .reading small,
+    .reading em {
       grid-column: 1 / -1;
-      margin-top: 6px;
-      color: rgba(235, 255, 255, 0.82);
-      font-size: 10px;
-      letter-spacing: 0.1em;
+      color: rgba(221, 255, 249, 0.76);
+      font-size: 9px;
+      font-style: normal;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .reading small { margin-bottom: 5px; }
+    .reading em { margin-top: 6px; }
+    .trend {
+      height: 54px;
+      padding: 7px 10px 0;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+    .trend > span {
+      position: absolute;
+      color: #74788d;
+      font-size: 8px;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
     }
     .sparkline {
@@ -986,178 +1235,9 @@ var je = 300 * 1e3, $ = class extends G {
     }
     .sparkline polyline {
       fill: none;
-      stroke: #55dce3;
+      stroke: var(--orb-home);
       stroke-width: 1.5;
       vector-effect: non-scaling-stroke;
-    }
-    .dashboard {
-      position: relative;
-      min-height: 230px;
-      margin: 18px 0 14px;
-      border-radius: 18px;
-      overflow: hidden;
-      background:
-        linear-gradient(180deg, rgba(24, 91, 120, 0.34), transparent 54%),
-        linear-gradient(180deg, transparent 58%, rgba(38, 83, 48, 0.28) 59%, rgba(25, 43, 32, 0.58));
-      box-shadow: inset 0 0 0 1px rgba(180, 231, 232, 0.12);
-    }
-    .sky {
-      position: absolute;
-      inset: 12px 16px auto;
-      height: 88px;
-      opacity: 0.95;
-    }
-    .sun {
-      position: absolute;
-      left: 50%;
-      top: 4px;
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      background: #ffd978;
-      box-shadow: 0 0 34px rgba(255, 207, 94, 0.76);
-      transform: translateX(-50%);
-    }
-    .arc {
-      position: absolute;
-      inset: 10px 0 0;
-      width: 100%;
-      height: 82px;
-    }
-    .arc path {
-      fill: none;
-      stroke: rgba(255, 238, 188, 0.5);
-      stroke-width: 1.4;
-      stroke-dasharray: 4 6;
-    }
-    .flow {
-      position: absolute;
-      background: rgba(113, 234, 220, calc(0.22 + 0.58 * var(--flow)));
-      border-radius: 999px;
-      box-shadow: 0 0 calc(8px + 18px * var(--flow)) rgba(76, 229, 220, calc(0.12 + 0.5 * var(--flow)));
-      opacity: 0.36;
-      transform-origin: center;
-      transition: opacity 0.5s ease, box-shadow 0.5s ease;
-    }
-    .flow.active {
-      opacity: 1;
-    }
-    .flow::after {
-      content: "";
-      position: absolute;
-      inset: -2px auto -2px 0;
-      width: 28%;
-      border-radius: inherit;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.86), transparent);
-      animation: flow 2.3s linear infinite;
-    }
-    .flow-solar {
-      left: 49%;
-      top: 84px;
-      width: 5px;
-      height: 66px;
-    }
-    .flow-solar::after {
-      width: 100%;
-      height: 24px;
-      animation-name: flow-down;
-    }
-    .flow-grid {
-      left: 62%;
-      top: 154px;
-      width: 23%;
-      height: calc(2px + 5px * var(--flow));
-    }
-    .flow-battery {
-      left: 17%;
-      top: 154px;
-      width: 23%;
-      height: calc(2px + 5px * var(--flow));
-    }
-    .node {
-      position: absolute;
-      display: grid;
-      place-items: center;
-      width: 88px;
-      min-height: 58px;
-      padding: 8px;
-      box-sizing: border-box;
-      border-radius: 14px;
-      background: rgba(7, 22, 30, 0.72);
-      border: 1px solid rgba(175, 239, 235, 0.18);
-      box-shadow: 0 14px 26px rgba(0, 0, 0, 0.18);
-      text-align: center;
-    }
-    .node span,
-    .metric span,
-    .trend-label span {
-      color: var(--secondary-text-color, #aab8c2);
-      font-size: 10px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-    .node strong,
-    .metric strong,
-    .trend-label strong {
-      font-size: 18px;
-      line-height: 1.1;
-      font-variant-numeric: tabular-nums;
-    }
-    .node small,
-    .metric small,
-    .trend-label small {
-      margin-left: 3px;
-      font-size: 10px;
-      font-weight: 600;
-    }
-    .solar-node {
-      left: 50%;
-      top: 62px;
-      transform: translateX(-50%);
-    }
-    .home-node {
-      left: 50%;
-      bottom: 22px;
-      transform: translateX(-50%);
-      background: rgba(6, 35, 43, 0.9);
-      border-color: rgba(102, 235, 226, 0.38);
-    }
-    .grid-node {
-      right: 16px;
-      bottom: 22px;
-    }
-    .battery-node {
-      left: 16px;
-      bottom: 22px;
-    }
-    .metrics {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 8px;
-    }
-    .metric {
-      min-width: 0;
-      padding: 10px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.045);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
-    }
-    .metric.active {
-      background: rgba(61, 211, 198, 0.1);
-    }
-    .metric strong {
-      display: block;
-      margin-top: 7px;
-    }
-    .metric em {
-      display: block;
-      margin-top: 3px;
-      color: var(--secondary-text-color, #aab8c2);
-      font-size: 11px;
-      font-style: normal;
-    }
-    .trend {
-      margin-top: 12px;
     }
     .insights {
       display: grid;
@@ -1197,12 +1277,6 @@ var je = 300 * 1e3, $ = class extends G {
       font-size: 12px;
       line-height: 1.35;
     }
-    .trend-label {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      margin-bottom: 3px;
-    }
     .message {
       min-height: 16px;
       margin: 8px 0 0;
@@ -1219,36 +1293,27 @@ var je = 300 * 1e3, $ = class extends G {
     @keyframes orbit {
       to { transform: rotateY(67deg) rotateZ(338deg); }
     }
-    @keyframes flow {
-      to { transform: translateX(360%); }
+    @keyframes current {
+      to { stroke-dashoffset: 30; }
     }
-    @keyframes flow-down {
-      to { transform: translateY(280%); }
+    @media (max-width: 430px) {
+      .card { padding: 17px; }
+      .flow { width: 104px; padding: 8px; }
+      .flow-copy strong { font-size: 14px; }
+      .insights { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .insights p { grid-column: 1 / -1; }
     }
     @media (prefers-reduced-motion: reduce) {
-      .core, .ring-two, .flow::after { animation: none; }
-    }
-    @media (max-width: 420px) {
-      .metrics {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-      .insights {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-      .insights p {
-        grid-column: 1 / -1;
-      }
-      .node {
-        width: 78px;
-      }
+      .core, .ring-two, .flow-map .energy { animation: none; }
+      .flow-map .energy { stroke-dasharray: none; opacity: 0.65; }
     }
   `;
 	}
 };
-Q([K({ attribute: !1 })], $.prototype, "hass", null), Q([q()], $.prototype, "channels", void 0), Q([q()], $.prototype, "loading", void 0), Q([q()], $.prototype, "error", void 0), Q([q()], $.prototype, "samples", void 0), $ = Q([Se("power-orb")], $), window.customCards = window.customCards ?? [], window.customCards.some((e) => e.type === "power-orb") || window.customCards.push({
+Q([Te({ attribute: !1 })], $.prototype, "hass", null), Q([K()], $.prototype, "channels", void 0), Q([K()], $.prototype, "flows", void 0), Q([K()], $.prototype, "loading", void 0), Q([K()], $.prototype, "error", void 0), Q([K()], $.prototype, "samples", void 0), $ = Q([Se("power-orb")], $), window.customCards = window.customCards ?? [], window.customCards.some((e) => e.type === "power-orb") || window.customCards.push({
 	type: "power-orb",
 	name: "Power Orb",
-	description: "Live solar, grid, battery, and home power from the Energy dashboard",
+	description: "Live home power from the Home Assistant Energy dashboard",
 	documentationURL: "https://github.com/ITSpecialist111/PowerOrb",
 	preview: !0
 });

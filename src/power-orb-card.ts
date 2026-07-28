@@ -1,13 +1,18 @@
 import { LitElement, css, html, nothing, svg } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
+  configuredEnergyFlows,
+  discoverEnergyFlows,
   discoverPowerChannels,
   entityPowerInWatts,
+  flowPowerInWatts,
   powerInsights,
   powerSnapshotInWatts,
   totalPowerInWatts,
 } from "./energy";
 import type {
+  EnergyFlow,
+  EnergyFlowKind,
   EnergyPreferences,
   HomeAssistant,
   PowerChannel,
@@ -32,6 +37,7 @@ export class PowerOrbCard extends LitElement {
   }
 
   @state() private channels: PowerChannel[] = [];
+  @state() private flows: EnergyFlow[] = [];
   @state() private loading = true;
   @state() private error?: string;
   @state() private samples: number[] = [];
@@ -51,11 +57,17 @@ export class PowerOrbCard extends LitElement {
     if (config.max_power !== undefined && config.max_power <= 0) {
       throw new Error("max_power must be greater than zero");
     }
+    if (config.entity && config.entities !== undefined) {
+      throw new Error("Configure either entity or entities, not both");
+    }
+    const configuredFlows =
+      config.entities === undefined ? [] : configuredEnergyFlows(config.entities);
     this.config = config;
     this.channels = config.entity
       ? [{ entityId: config.entity, multiplier: 1, role: "grid" }]
-      : [];
-    this.loading = !config.entity;
+      : configuredFlows.flatMap((flow) => flow.channels);
+    this.flows = configuredFlows;
+    this.loading = !config.entity && config.entities === undefined;
     this.error = undefined;
     this.samples = [];
     this.disconnectData();
@@ -95,7 +107,9 @@ export class PowerOrbCard extends LitElement {
   }
 
   private connect(): Promise<void> {
-    if (!this._hass || this.config.entity) return Promise.resolve();
+    if (!this._hass || this.config.entity || this.config.entities !== undefined) {
+      return Promise.resolve();
+    }
     if (this.connecting) return this.connecting;
 
     const generation = this.connectionGeneration;
@@ -140,12 +154,15 @@ export class PowerOrbCard extends LitElement {
   }
 
   private async loadEnergyPreferences(): Promise<void> {
-    if (!this._hass || this.config.entity) return;
+    if (!this._hass || this.config.entity || this.config.entities !== undefined) {
+      return;
+    }
     this.loading = true;
     try {
       const preferences = await this._hass.callWS<EnergyPreferences>({
         type: "energy/get_prefs",
       });
+      this.flows = discoverEnergyFlows(preferences);
       this.channels = discoverPowerChannels(preferences);
       this.error =
         this.channels.length === 0
@@ -214,18 +231,52 @@ export class PowerOrbCard extends LitElement {
     `;
   }
 
-  private flowStyle(watts: number, maxPower: number): string {
-    const flow = maxPower > 0 ? Math.min(1, Math.max(0, watts / maxPower)) : 0;
-    return `--flow:${flow}`;
+  private flowValue(kind: EnergyFlowKind): number | null {
+    if (!this._hass) return null;
+    const flow = this.flows.find((candidate) => candidate.kind === kind);
+    return flow ? flowPowerInWatts(this._hass.states, flow) : null;
   }
 
-  private metric(label: string, watts: number, detail: string) {
-    const formatted = this.formatPower(watts);
+  private flowLabel(kind: EnergyFlowKind, watts: number): string {
+    if (Math.abs(watts) < 1) return "idle";
+    if (kind === "grid") return watts > 0 ? "importing" : "exporting";
+    if (kind === "battery") return watts > 0 ? "supplying" : "charging";
+    return watts > 0 ? "generating" : "idle";
+  }
+
+  private renderFlow(kind: EnergyFlowKind) {
+    const flow = this.flows.find((candidate) => candidate.kind === kind);
+    if (!flow) return nothing;
+
+    const watts = this.flowValue(kind);
+    const formatted = watts === null ? undefined : this.formatPower(Math.abs(watts));
+    const active = watts !== null && Math.abs(watts) >= 1;
+    const speed = active
+      ? Math.max(0.9, 4.5 - Math.min(Math.abs(watts), 10_000) / 2_800)
+      : 0;
+    const direction = watts !== null && watts < 0 ? "outward" : "inward";
+    const names: Record<EnergyFlowKind, string> = {
+      solar: "Solar",
+      grid: "Grid",
+      battery: "Battery",
+    };
+
     return html`
-      <div class=${`metric ${watts > 0 ? "active" : ""}`}>
-        <span>${label}</span>
-        <strong>${formatted.value}<small>${formatted.unit}</small></strong>
-        <em>${detail}</em>
+      <div
+        class=${`flow flow-${kind} ${active ? direction : "idle"}`}
+        style=${`--flow-speed:${speed}s`}
+        aria-label=${`${names[kind]} ${formatted ? `${formatted.value} ${formatted.unit}, ${this.flowLabel(kind, watts ?? 0)}` : "unavailable"}`}
+      >
+        <span class="flow-icon" aria-hidden="true"></span>
+        <span class="flow-copy">
+          <small>${names[kind]}</small>
+          <strong
+            >${formatted
+              ? html`${formatted.value}<em>${formatted.unit}</em>`
+              : "ÔÇö"}</strong
+          >
+          <span>${watts === null ? "unavailable" : this.flowLabel(kind, watts)}</span>
+        </span>
       </div>
     `;
   }
@@ -239,113 +290,111 @@ export class PowerOrbCard extends LitElement {
     const formatted = power === null ? undefined : this.formatPower(power);
     const snapshot = this.currentSnapshot();
     const insights = snapshot ? powerInsights(snapshot) : undefined;
-    const gridNet = insights?.netGridWatts ?? 0;
-    const batteryNet = insights?.netBatteryWatts ?? 0;
 
     return html`
       <ha-card>
         <div class="card" style=${`--intensity:${intensity}`}>
           <header>
-            <span>${this.config.name ?? "Power Orb"}</span>
+            <div>
+              <small>Energy constellation</small>
+              <span>${this.config.name ?? "Power Orb"}</span>
+            </div>
             <span class="status" title="Live data">
               <i class=${power === null ? "offline" : ""}></i> live
             </span>
           </header>
 
-          ${snapshot
+          <div class=${`constellation ${this.config.entity ? "direct" : ""}`}>
+            <svg
+              class="flow-map"
+              viewBox="0 0 600 360"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              ${(["solar", "grid", "battery"] as EnergyFlowKind[]).map(
+                (kind) => {
+                  if (!this.flows.some((flow) => flow.kind === kind)) {
+                    return nothing;
+                  }
+                  const paths: Record<EnergyFlowKind, string> = {
+                    solar: "M 105 78 C 185 78, 205 180, 300 180",
+                    grid: "M 495 78 C 415 78, 395 180, 300 180",
+                    battery: "M 105 286 C 185 286, 205 180, 300 180",
+                  };
+                  const watts = this.flowValue(kind);
+                  const active = watts !== null && Math.abs(watts) >= 1;
+                  const direction = watts !== null && watts < 0 ? "outward" : "inward";
+                  const speed = active
+                    ? Math.max(
+                        0.9,
+                        4.5 - Math.min(Math.abs(watts), 10_000) / 2_800,
+                      )
+                    : 0;
+                  return svg`
+                    <path class=${`track ${kind}`} d=${paths[kind]}></path>
+                    <path
+                      class=${`energy ${kind} ${active ? direction : "idle"}`}
+                      style=${`--flow-speed:${speed}s`}
+                      d=${paths[kind]}
+                    ></path>
+                  `;
+                },
+              )}
+            </svg>
+
+            ${this.config.entity
+              ? nothing
+              : html`
+                  ${this.renderFlow("solar")}
+                  ${this.renderFlow("grid")}
+                  ${this.renderFlow("battery")}
+                `}
+
+            <div class="home">
+              <div class="orb" aria-hidden="true">
+                <div class="facet"></div>
+                <div class="core"></div>
+                <div class="ring ring-one"></div>
+                <div class="ring ring-two"></div>
+              </div>
+              <div class="reading" aria-live="polite">
+                <small>Home</small>
+                ${formatted
+                  ? html`<strong>${formatted.value}</strong
+                      ><span>${formatted.unit}</span>`
+                  : html`<strong>ÔÇö</strong>`}
+                <em>live demand</em>
+              </div>
+            </div>
+          </div>
+
+          <div class="trend">
+            <span>60-second demand trace</span>
+            ${this.sparkline()}
+          </div>
+          ${insights
             ? html`
-                <section class="dashboard" aria-label="Live energy dashboard">
-                  <div class="sky" aria-hidden="true">
-                    <div class="sun"></div>
-                    <svg class="arc" viewBox="0 0 260 100" preserveAspectRatio="none">
-                      <path d="M12 88 C 70 8, 188 8, 248 88"></path>
-                    </svg>
-                  </div>
-
-                  <div class="flow flow-solar ${snapshot.solar > 0 ? "active" : ""}" style=${this.flowStyle(snapshot.solar, maxPower)}></div>
-                  <div class="flow flow-grid ${gridNet !== 0 ? "active" : ""}" style=${this.flowStyle(Math.abs(gridNet), maxPower)}></div>
-                  <div class="flow flow-battery ${batteryNet !== 0 ? "active" : ""}" style=${this.flowStyle(Math.abs(batteryNet), maxPower)}></div>
-
-                  <div class="node solar-node">
-                    <span>Solar</span>
-                    <strong>${this.formatPower(snapshot.solar).value}<small>${this.formatPower(snapshot.solar).unit}</small></strong>
-                  </div>
-                  <div class="node home-node">
-                    <span>Home</span>
-                    <strong>${this.formatPower(snapshot.homeLoad).value}<small>${this.formatPower(snapshot.homeLoad).unit}</small></strong>
-                  </div>
-                  <div class="node grid-node">
-                    <span>Grid</span>
-                    <strong>${this.formatPower(Math.abs(gridNet)).value}<small>${this.formatPower(Math.abs(gridNet)).unit}</small></strong>
-                  </div>
-                  <div class="node battery-node">
-                    <span>Battery</span>
-                    <strong>${this.formatPower(Math.abs(batteryNet)).value}<small>${this.formatPower(Math.abs(batteryNet)).unit}</small></strong>
-                  </div>
-                </section>
-
-                <section class="metrics" aria-label="Energy source details">
-                  ${this.metric("Solar", snapshot.solar, "production")}
-                  ${this.metric(
-                    "Grid",
-                    Math.abs(gridNet),
-                    gridNet < 0 ? "exporting" : gridNet > 0 ? "importing" : "idle",
-                  )}
-                  ${this.metric(
-                    "Battery",
-                    Math.abs(batteryNet),
-                    batteryNet < 0 ? "charging" : batteryNet > 0 ? "discharging" : "idle",
-                  )}
-                  ${this.metric("Home", snapshot.homeLoad, "estimated load")}
-                </section>
-
                 <section class="insights" aria-label="Automatic energy insights">
                   <div>
                     <span>Self powered</span>
-                    <strong>${insights?.selfPoweredPercent ?? 0}<small>%</small></strong>
+                    <strong>${insights.selfPoweredPercent}<small>%</small></strong>
                   </div>
                   <div>
                     <span>Solar used</span>
-                    <strong>${insights?.solarUsedPercent ?? 0}<small>%</small></strong>
+                    <strong>${insights.solarUsedPercent}<small>%</small></strong>
                   </div>
-                  <p>${insights?.recommendation}</p>
+                  <p>${insights.recommendation}</p>
                 </section>
               `
-            : html`
-                <div class="visual">
-                  <div class="orb" aria-hidden="true">
-                    <div class="core"></div>
-                    <div class="ring ring-one"></div>
-                    <div class="ring ring-two"></div>
-                  </div>
-                  <div class="reading" aria-live="polite">
-                    ${formatted
-                      ? html`<strong>${formatted.value}</strong
-                          ><span>${formatted.unit}</span>`
-                      : html`<strong>—</strong>`}
-                    <small>live power</small>
-                  </div>
-                </div>
-              `}
-
-          <div class="trend">
-            <div class="trend-label">
-              <span>Recent load</span>
-              ${formatted
-                ? html`<strong>${formatted.value}<small>${formatted.unit}</small></strong>`
-                : nothing}
-            </div>
-            ${this.sparkline()}
-          </div>
-
+            : nothing}
           ${this.loading
-            ? html`<p class="message">Discovering Energy dashboard…</p>`
+            ? html`<p class="message">Discovering Energy dashboardÔÇª</p>`
             : this.error
               ? html`<p class="message error">${this.error}</p>`
               : html`<p class="message">
                   ${this.config.entity
                     ? this.config.entity
-                    : `${this.channels.length} Energy dashboard ${this.channels.length === 1 ? "sensor" : "sensors"} mapped automatically`}
+                    : `${this.channels.length} live ${this.channels.length === 1 ? "sensor" : "sensors"}`}
                 </p>`}
         </div>
       </ha-card>
@@ -355,29 +404,65 @@ export class PowerOrbCard extends LitElement {
   static styles = css`
     :host {
       display: block;
+      --orb-solar: #ffc857;
+      --orb-grid: #68a7ff;
+      --orb-battery: #b68cff;
+      --orb-home: #72f5dc;
     }
     ha-card {
       overflow: hidden;
       background:
-        radial-gradient(circle at 50% 35%, rgba(23, 104, 122, 0.24), transparent 45%),
-        var(--ha-card-background, var(--card-background-color, #10161d));
-      color: var(--primary-text-color, #f4fbff);
+        radial-gradient(circle at 50% 45%, rgba(45, 120, 126, 0.15), transparent 35%),
+        radial-gradient(circle at 8% 0%, rgba(95, 68, 132, 0.16), transparent 34%),
+        linear-gradient(145deg, #11121a, #08090e 60%, #0d1018);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--primary-text-color, #f7f8ff);
     }
     .card {
-      min-height: 430px;
-      padding: 20px;
+      min-height: 500px;
+      padding: 22px;
       position: relative;
       box-sizing: border-box;
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.22;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.32) 0.5px, transparent 0.5px);
+      background-size: 7px 7px;
+      mask-image: linear-gradient(to bottom, black, transparent 70%);
     }
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 18px;
-      font-weight: 600;
+      position: relative;
+      z-index: 2;
+    }
+    header div {
+      display: grid;
+      gap: 4px;
+    }
+    header div > small {
+      color: #8f93a8;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+    header div > span {
+      font-size: 19px;
+      font-weight: 650;
+      letter-spacing: -0.02em;
     }
     .status {
-      color: var(--secondary-text-color, #aab8c2);
+      padding: 6px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.035);
+      color: #a7abbd;
       font-size: 11px;
       font-weight: 500;
       letter-spacing: 0.12em;
@@ -389,44 +474,170 @@ export class PowerOrbCard extends LitElement {
       height: 7px;
       margin-right: 5px;
       border-radius: 50%;
-      background: #44e0a1;
-      box-shadow: 0 0 8px #44e0a1;
+      background: var(--orb-home);
+      box-shadow: 0 0 8px var(--orb-home);
     }
     .status i.offline {
       background: #7f8b93;
       box-shadow: none;
     }
-    .visual {
-      height: 205px;
-      display: grid;
-      place-items: center;
+    .constellation {
+      height: 350px;
+      margin-top: 8px;
       position: relative;
     }
-    .orb {
-      width: 156px;
-      height: 156px;
+    .constellation.direct {
+      display: grid;
+      place-items: center;
+    }
+    .flow-map {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      inset: 0;
+      overflow: visible;
+    }
+    .flow-map path {
+      fill: none;
+      vector-effect: non-scaling-stroke;
+    }
+    .flow-map .track {
+      stroke: rgba(255, 255, 255, 0.08);
+      stroke-width: 2;
+    }
+    .flow-map .energy {
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-dasharray: 1 14;
+      animation: current var(--flow-speed) linear infinite;
+      filter: drop-shadow(0 0 5px currentColor);
+    }
+    .flow-map .energy.inward {
+      animation-direction: reverse;
+    }
+    .flow-map .energy.idle {
+      opacity: 0.2;
+      animation: none;
+    }
+    .flow-map .solar { color: var(--orb-solar); stroke: var(--orb-solar); }
+    .flow-map .grid { color: var(--orb-grid); stroke: var(--orb-grid); }
+    .flow-map .battery { color: var(--orb-battery); stroke: var(--orb-battery); }
+    .flow {
+      width: 116px;
+      min-height: 68px;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      position: absolute;
+      z-index: 2;
+      box-sizing: border-box;
+      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+      border-radius: 16px;
+      background: rgba(18, 20, 30, 0.76);
+      box-shadow: inset 0 1px rgba(255, 255, 255, 0.055), 0 14px 35px rgba(0, 0, 0, 0.22);
+      backdrop-filter: blur(12px);
+    }
+    .flow-solar,
+    .flow-grid,
+    .flow-battery {
+      transform: translate(-50%, -50%);
+    }
+    .flow-solar { top: 21.67%; left: 17.5%; color: var(--orb-solar); }
+    .flow-grid { top: 21.67%; left: 82.5%; color: var(--orb-grid); }
+    .flow-battery { top: 79.44%; left: 17.5%; color: var(--orb-battery); }
+    .flow-icon {
+      width: 12px;
+      height: 12px;
+      flex: 0 0 auto;
+      border: 2px solid currentColor;
+      border-radius: 50%;
+      box-shadow: 0 0 13px currentColor;
+    }
+    .flow-battery .flow-icon {
+      border-radius: 3px;
+    }
+    .flow-grid .flow-icon {
+      transform: rotate(45deg);
+      border-radius: 2px;
+    }
+    .flow-copy {
+      min-width: 0;
+      display: grid;
+    }
+    .flow-copy small,
+    .flow-copy > span {
+      color: #8f93a8;
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .flow-copy strong {
+      margin: 2px 0;
+      color: #f7f8ff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 16px;
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+    }
+    .flow-copy em {
+      margin-left: 3px;
+      color: currentColor;
+      font-size: 9px;
+      font-style: normal;
+    }
+    .home {
+      width: 174px;
+      height: 174px;
+      display: grid;
+      place-items: center;
+      position: absolute;
+      z-index: 3;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .direct .home {
       position: relative;
+      left: auto;
+      top: auto;
+      transform: none;
+    }
+    .orb {
+      width: 146px;
+      height: 146px;
+      position: absolute;
       border-radius: 50%;
       background:
-        radial-gradient(circle at 42% 38%, rgba(255, 255, 255, 0.9), transparent 5%),
-        radial-gradient(circle at 50% 50%, #8cf7ee 0%, #20b8ca 30%, #086177 68%, #032d3c 100%);
+        linear-gradient(145deg, rgba(255, 255, 255, 0.12), transparent 38%),
+        radial-gradient(circle at 45% 42%, #26363c 0%, #111b22 44%, #06090d 76%);
+      border: 1px solid rgba(164, 255, 238, 0.24);
       box-shadow:
-        0 0 calc(18px + 36px * var(--intensity)) rgba(41, 218, 222, calc(0.2 + 0.55 * var(--intensity))),
-        inset -18px -16px 30px rgba(0, 12, 28, 0.55);
+        0 0 calc(12px + 30px * var(--intensity)) rgba(85, 234, 211, calc(0.14 + 0.36 * var(--intensity))),
+        inset -22px -18px 34px rgba(0, 0, 0, 0.62);
       transform: scale(calc(0.94 + 0.06 * var(--intensity)));
       transition: box-shadow 0.8s ease, transform 0.8s ease;
+    }
+    .facet {
+      position: absolute;
+      inset: 9%;
+      border-radius: 42% 58% 48% 52%;
+      background:
+        linear-gradient(32deg, transparent 48%, rgba(145, 255, 235, 0.08) 49%, transparent 51%),
+        linear-gradient(145deg, transparent 47%, rgba(255, 255, 255, 0.07) 48%, transparent 50%);
+      transform: rotate(14deg);
     }
     .core {
       position: absolute;
       inset: 18%;
       border-radius: 50%;
-      border: 1px solid rgba(177, 255, 250, 0.35);
+      border: 1px solid rgba(155, 255, 237, 0.28);
       animation: breathe 3s ease-in-out infinite;
     }
     .ring {
       position: absolute;
       inset: -12px;
-      border: 1px solid rgba(77, 225, 232, 0.35);
+      border: 1px solid rgba(114, 245, 220, 0.3);
       border-radius: 50%;
       transform: rotateX(68deg) rotateZ(12deg);
     }
@@ -443,10 +654,11 @@ export class PowerOrbCard extends LitElement {
       align-items: baseline;
       gap: 5px;
       text-align: center;
-      text-shadow: 0 2px 12px #002b37;
+      text-shadow: 0 2px 12px #001b18;
     }
     .reading strong {
-      font-size: 35px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 31px;
       line-height: 1;
       font-variant-numeric: tabular-nums;
     }
@@ -454,12 +666,30 @@ export class PowerOrbCard extends LitElement {
       font-size: 15px;
       font-weight: 600;
     }
-    .reading small {
+    .reading small,
+    .reading em {
       grid-column: 1 / -1;
-      margin-top: 6px;
-      color: rgba(235, 255, 255, 0.82);
-      font-size: 10px;
-      letter-spacing: 0.1em;
+      color: rgba(221, 255, 249, 0.76);
+      font-size: 9px;
+      font-style: normal;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .reading small { margin-bottom: 5px; }
+    .reading em { margin-top: 6px; }
+    .trend {
+      height: 54px;
+      padding: 7px 10px 0;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+    .trend > span {
+      position: absolute;
+      color: #74788d;
+      font-size: 8px;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
     }
     .sparkline {
@@ -470,178 +700,9 @@ export class PowerOrbCard extends LitElement {
     }
     .sparkline polyline {
       fill: none;
-      stroke: #55dce3;
+      stroke: var(--orb-home);
       stroke-width: 1.5;
       vector-effect: non-scaling-stroke;
-    }
-    .dashboard {
-      position: relative;
-      min-height: 230px;
-      margin: 18px 0 14px;
-      border-radius: 18px;
-      overflow: hidden;
-      background:
-        linear-gradient(180deg, rgba(24, 91, 120, 0.34), transparent 54%),
-        linear-gradient(180deg, transparent 58%, rgba(38, 83, 48, 0.28) 59%, rgba(25, 43, 32, 0.58));
-      box-shadow: inset 0 0 0 1px rgba(180, 231, 232, 0.12);
-    }
-    .sky {
-      position: absolute;
-      inset: 12px 16px auto;
-      height: 88px;
-      opacity: 0.95;
-    }
-    .sun {
-      position: absolute;
-      left: 50%;
-      top: 4px;
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      background: #ffd978;
-      box-shadow: 0 0 34px rgba(255, 207, 94, 0.76);
-      transform: translateX(-50%);
-    }
-    .arc {
-      position: absolute;
-      inset: 10px 0 0;
-      width: 100%;
-      height: 82px;
-    }
-    .arc path {
-      fill: none;
-      stroke: rgba(255, 238, 188, 0.5);
-      stroke-width: 1.4;
-      stroke-dasharray: 4 6;
-    }
-    .flow {
-      position: absolute;
-      background: rgba(113, 234, 220, calc(0.22 + 0.58 * var(--flow)));
-      border-radius: 999px;
-      box-shadow: 0 0 calc(8px + 18px * var(--flow)) rgba(76, 229, 220, calc(0.12 + 0.5 * var(--flow)));
-      opacity: 0.36;
-      transform-origin: center;
-      transition: opacity 0.5s ease, box-shadow 0.5s ease;
-    }
-    .flow.active {
-      opacity: 1;
-    }
-    .flow::after {
-      content: "";
-      position: absolute;
-      inset: -2px auto -2px 0;
-      width: 28%;
-      border-radius: inherit;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.86), transparent);
-      animation: flow 2.3s linear infinite;
-    }
-    .flow-solar {
-      left: 49%;
-      top: 84px;
-      width: 5px;
-      height: 66px;
-    }
-    .flow-solar::after {
-      width: 100%;
-      height: 24px;
-      animation-name: flow-down;
-    }
-    .flow-grid {
-      left: 62%;
-      top: 154px;
-      width: 23%;
-      height: calc(2px + 5px * var(--flow));
-    }
-    .flow-battery {
-      left: 17%;
-      top: 154px;
-      width: 23%;
-      height: calc(2px + 5px * var(--flow));
-    }
-    .node {
-      position: absolute;
-      display: grid;
-      place-items: center;
-      width: 88px;
-      min-height: 58px;
-      padding: 8px;
-      box-sizing: border-box;
-      border-radius: 14px;
-      background: rgba(7, 22, 30, 0.72);
-      border: 1px solid rgba(175, 239, 235, 0.18);
-      box-shadow: 0 14px 26px rgba(0, 0, 0, 0.18);
-      text-align: center;
-    }
-    .node span,
-    .metric span,
-    .trend-label span {
-      color: var(--secondary-text-color, #aab8c2);
-      font-size: 10px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-    .node strong,
-    .metric strong,
-    .trend-label strong {
-      font-size: 18px;
-      line-height: 1.1;
-      font-variant-numeric: tabular-nums;
-    }
-    .node small,
-    .metric small,
-    .trend-label small {
-      margin-left: 3px;
-      font-size: 10px;
-      font-weight: 600;
-    }
-    .solar-node {
-      left: 50%;
-      top: 62px;
-      transform: translateX(-50%);
-    }
-    .home-node {
-      left: 50%;
-      bottom: 22px;
-      transform: translateX(-50%);
-      background: rgba(6, 35, 43, 0.9);
-      border-color: rgba(102, 235, 226, 0.38);
-    }
-    .grid-node {
-      right: 16px;
-      bottom: 22px;
-    }
-    .battery-node {
-      left: 16px;
-      bottom: 22px;
-    }
-    .metrics {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 8px;
-    }
-    .metric {
-      min-width: 0;
-      padding: 10px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.045);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
-    }
-    .metric.active {
-      background: rgba(61, 211, 198, 0.1);
-    }
-    .metric strong {
-      display: block;
-      margin-top: 7px;
-    }
-    .metric em {
-      display: block;
-      margin-top: 3px;
-      color: var(--secondary-text-color, #aab8c2);
-      font-size: 11px;
-      font-style: normal;
-    }
-    .trend {
-      margin-top: 12px;
     }
     .insights {
       display: grid;
@@ -681,12 +742,6 @@ export class PowerOrbCard extends LitElement {
       font-size: 12px;
       line-height: 1.35;
     }
-    .trend-label {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      margin-bottom: 3px;
-    }
     .message {
       min-height: 16px;
       margin: 8px 0 0;
@@ -703,28 +758,19 @@ export class PowerOrbCard extends LitElement {
     @keyframes orbit {
       to { transform: rotateY(67deg) rotateZ(338deg); }
     }
-    @keyframes flow {
-      to { transform: translateX(360%); }
+    @keyframes current {
+      to { stroke-dashoffset: 30; }
     }
-    @keyframes flow-down {
-      to { transform: translateY(280%); }
+    @media (max-width: 430px) {
+      .card { padding: 17px; }
+      .flow { width: 104px; padding: 8px; }
+      .flow-copy strong { font-size: 14px; }
+      .insights { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .insights p { grid-column: 1 / -1; }
     }
     @media (prefers-reduced-motion: reduce) {
-      .core, .ring-two, .flow::after { animation: none; }
-    }
-    @media (max-width: 420px) {
-      .metrics {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-      .insights {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-      .insights p {
-        grid-column: 1 / -1;
-      }
-      .node {
-        width: 78px;
-      }
+      .core, .ring-two, .flow-map .energy { animation: none; }
+      .flow-map .energy { stroke-dasharray: none; opacity: 0.65; }
     }
   `;
 }
@@ -740,7 +786,7 @@ if (!window.customCards.some((card) => card.type === "power-orb")) {
   window.customCards.push({
     type: "power-orb",
     name: "Power Orb",
-    description: "Live solar, grid, battery, and home power from the Energy dashboard",
+    description: "Live home power from the Home Assistant Energy dashboard",
     documentationURL: "https://github.com/ITSpecialist111/PowerOrb",
     preview: true,
   });

@@ -15,13 +15,14 @@ runs inside Home Assistant and uses its authenticated frontend API.
 
 ## Features
 
-- Automatically discovers solar, grid, and battery power sensors
-- Shows a live solar, grid, battery, and home-load dashboard from that discovery
+- Automatically discovers and visualizes solar, grid, battery, and home power
+- Directional live flows distinguish grid import/export and battery charge/discharge
 - Derives self-powered percentage, solar-use percentage, and net flow direction
 - Gives a plain-language live recommendation for surplus, import, and battery states
+- Dark mineral-glass interface with a distinct color and reading for every source
 - Reacts when Energy dashboard preferences change
 - Supports W, kW, and MW source sensors
-- Animated, responsive flow scene with a rolling live trend
+- Animated, responsive dark-glass orb with a rolling 60-second demand trace
 - Works offline after installation; no CDN resources
 - Honors reduced-motion accessibility preferences
 - Optional direct power entity for installations without Energy configuration
@@ -49,7 +50,7 @@ are valid HACS Dashboard sources.
 1. Download `dist/power-orb.js` from this repository, or the `power-orb.js`
    asset from a tagged release, into `/config/www/power-orb/`.
 2. Add `/local/power-orb/power-orb.js` as a JavaScript module under
-   **Settings → Dashboards → Resources**.
+   **Settings ÔåÆ Dashboards ÔåÆ Resources**.
 3. Add the card using the YAML above.
 
 ## Configuration
@@ -58,6 +59,7 @@ are valid HACS Dashboard sources.
 | --- | --- | --- | --- |
 | `name` | string | `Power Orb` | Card heading |
 | `entity` | string | auto-discovered | Direct instantaneous power sensor |
+| `entities` | mapping | auto-discovered | Explicit solar, grid, and battery power sensors |
 | `max_power` | number | dynamic / 5000 W | Power level at maximum glow |
 | `unit` | `W` or `kW` | automatic | Display unit |
 
@@ -71,10 +73,32 @@ max_power: 10000
 unit: kW
 ```
 
+To visualize power entities that are not configured in the Energy dashboard,
+map each entity explicitly to its role. A role accepts one entity ID or a list:
+
+```yaml
+type: custom:power-orb
+entities:
+  solar:
+    - sensor.roof_power
+    - sensor.garage_power
+  grid: sensor.grid_power
+  battery: sensor.battery_power
+```
+
+Explicit grid and battery entities should be signed: positive values mean grid
+import or battery supply, while negative values mean grid export or battery
+charging. `entity` and `entities` cannot be used together.
+
 For automatic discovery, configure real-time power sensors in
-**Settings → Dashboards → Energy**. Cumulative kWh meters are intentionally not
+**Settings ÔåÆ Dashboards ÔåÆ Energy**. Cumulative kWh meters are intentionally not
 converted into live power because that produces inaccurate values between
-meter updates.
+meter updates. Power Orb groups every configured live source by role: solar
+generation, grid import or export, battery supply or charging, and the resulting
+home demand. Flow direction and animation speed reflect each source's current
+direction and magnitude. Those same roles drive the self-powered percentage,
+solar-use percentage, and the plain-language recommendation shown below the
+demand trace.
 
 ## HASS MCP OpenClaw
 

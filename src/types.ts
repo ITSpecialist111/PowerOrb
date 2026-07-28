@@ -26,6 +26,7 @@ export interface PowerOrbConfig {
   type: "custom:power-orb";
   name?: string;
   entity?: string;
+  entities?: Partial<Record<EnergyFlowKind, string | string[]>>;
   max_power?: number;
   unit?: "W" | "kW";
 }
@@ -65,4 +66,11 @@ export interface PowerInsights {
   netGridWatts: number;
   netBatteryWatts: number;
   recommendation: string;
+}
+
+export type EnergyFlowKind = "solar" | "grid" | "battery";
+
+export interface EnergyFlow {
+  kind: EnergyFlowKind;
+  channels: PowerChannel[];
 }
