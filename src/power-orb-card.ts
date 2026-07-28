@@ -20,6 +20,7 @@ import {
   fetchBaseline,
   fetchToday,
   fractionalHour,
+  hourlyBounds,
   missingStatistics,
   niceCeiling,
 } from "./statistics";
@@ -144,6 +145,7 @@ export class PowerOrbCard extends LitElement {
   private connecting?: Promise<void>;
   private resizeObserver?: ResizeObserver;
   private retryTimer?: number;
+  private kneeCache?: { hours: unknown; knee: number };
   private historyAttempted = false;
   private historyRetried = false;
 
@@ -450,12 +452,11 @@ export class PowerOrbCard extends LitElement {
     return bandRuns(this.baseline?.hours ?? [], wrap);
   }
 
-  /** Which side of the usual range an hour fell, if either. */
+  /** Which side of the usual range a completed hour fell, if either. */
   private departure(hour: number, watts: number): "above" | "below" | null {
     const band = this.baseline?.hours[hour];
     if (!band) return null;
-    const bounds = deviationBounds(band);
-    if (!bounds) return null;
+    const bounds = hourlyBounds(band);
     if (watts > bounds.high) return "above";
     if (watts < bounds.low) return "below";
     return null;
@@ -511,27 +512,28 @@ export class PowerOrbCard extends LitElement {
     const marks = this.today.map((entry) => {
       const band = hours[entry.hour];
       if (!band) return nothing;
-      return this.tick(entry.hour + 0.5, entry.watts, band, max);
+      return this.tick(entry.hour + 0.5, entry.watts, hourlyBounds(band), max);
     });
 
     // The hour in progress has no completed bucket, so the live reading has to
-    // supply its own tick. Without it the deviation named in the verdict has
-    // nothing on the dial to point at.
+    // supply its own tick, judged against the five-minute envelope because it
+    // is an instant rather than an hourly mean.
     const nowHour = fractionalHour(this.now, this.timeZone);
     const current = hours[Math.floor(nowHour)];
-    if (live !== null && current) {
-      marks.push(this.tick(nowHour, live, current, max));
+    const bounds = current ? deviationBounds(current) : null;
+    if (live !== null && bounds) {
+      marks.push(this.tick(nowHour, live, bounds, max));
     }
     return marks;
   }
 
-  /**
-   * One deviation mark, using the same bounds the verdict is judged against so
-   * the picture and the sentence cannot disagree.
-   */
-  private tick(hour: number, watts: number, band: BaselineHour, max: number) {
-    const bounds = deviationBounds(band);
-    if (!bounds) return nothing;
+  /** One deviation mark, from the edge of the given range out to the reading. */
+  private tick(
+    hour: number,
+    watts: number,
+    bounds: { low: number; high: number },
+    max: number,
+  ) {
     const above = watts > bounds.high;
     if (!above && watts >= bounds.low) return nothing;
 
@@ -543,7 +545,7 @@ export class PowerOrbCard extends LitElement {
         ? edge + (above ? MIN_TICK : -MIN_TICK)
         : tip;
     const from = polar(hour, edge);
-    const to = polar(hour, reach);
+    const to = polar(hour, Math.min(Math.max(reach, RADIUS_IN), RADIUS_OUT));
     return svg`<line
       class=${`tick ${above ? "above" : "below"}`}
       x1=${from[0]} y1=${from[1]} x2=${to[0]} y2=${to[1]}
@@ -607,6 +609,7 @@ export class PowerOrbCard extends LitElement {
     return svg`
       <svg class="dial" viewBox="0 0 ${VIEW} ${VIEW}" role="img"
         aria-label=${this.summary(live)}>
+        <path class="lived" d=${sector(0, now, RADIUS_IN, RADIUS_OUT)} />
         <circle class="rim" cx=${CENTRE} cy=${CENTRE} r=${RADIUS_OUT} />
         <circle class="rim" cx=${CENTRE} cy=${CENTRE} r=${RADIUS_IN} />
         <circle class="rim mid" cx=${CENTRE} cy=${CENTRE}
@@ -631,7 +634,7 @@ export class PowerOrbCard extends LitElement {
               <circle class="bead" cx=${bead[0]} cy=${bead[1]} r="6" />
             `
           : nothing}
-        <path class="future" d=${sector(now, 24, RADIUS_IN, RADIUS_OUT)} />
+        ${this.renderNowBracket(max, now)}
         <text class="scale" x=${polar(21, RADIUS_OUT)[0]} y=${polar(21, RADIUS_OUT)[1]}>
           ${scale.value} ${scale.unit}
         </text>
@@ -641,6 +644,23 @@ export class PowerOrbCard extends LitElement {
         </text>
       </svg>
     `;
+  }
+
+  /**
+   * A bracket at the current angle spanning the range a reading right now can
+   * take without counting as a departure.
+   *
+   * The drawn band is a range of hourly means and cannot judge an instant, so
+   * the envelope that can is shown only where it applies: at now.
+   */
+  private renderNowBracket(max: number, now: number) {
+    const band = this.baseline?.hours[Math.floor(now)];
+    const bounds = band ? deviationBounds(band) : null;
+    if (!bounds) return nothing;
+    const from = polar(now, this.radius(bounds.low, max));
+    const to = polar(now, this.radius(bounds.high, max));
+    return svg`<line class="now-range" x1=${from[0]} y1=${from[1]}
+      x2=${to[0]} y2=${to[1]} />`;
   }
 
   private renderStrip(live: number | null) {
@@ -670,8 +690,7 @@ export class PowerOrbCard extends LitElement {
       ? this.today.map((entry) => {
           const band = hours[entry.hour];
           if (!band) return nothing;
-          const bounds = deviationBounds(band);
-          if (!bounds) return nothing;
+          const bounds = hourlyBounds(band);
           const above = entry.watts > bounds.high;
           if (!above && entry.watts >= bounds.low) return nothing;
           return svg`<line
@@ -812,6 +831,7 @@ export class PowerOrbCard extends LitElement {
             <span class="key line"></span>today
             <span class="key line above"></span>above
             <span class="key line below"></span>below
+            <span class="key dot"></span>now
           </div>
 
           <div class="chips">
@@ -955,12 +975,19 @@ export class PowerOrbCard extends LitElement {
     }
     .band {
       fill: rgba(160, 178, 210, 0.13);
-      stroke: none;
+      stroke: rgba(196, 212, 238, 0.42);
+      stroke-width: 1;
+      stroke-linejoin: round;
     }
-    .future {
-      fill: rgba(6, 7, 12, 0.55);
+    .lived {
+      fill: rgba(255, 255, 255, 0.025);
       stroke: none;
       pointer-events: none;
+    }
+    .now-range {
+      stroke: rgba(255, 255, 255, 0.35);
+      stroke-width: 6;
+      stroke-linecap: round;
     }
     .rim.mid {
       stroke: rgba(255, 255, 255, 0.07);

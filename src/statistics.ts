@@ -297,23 +297,28 @@ export const DEVIATION_MARGIN = 1.1;
 /**
  * The range to draw for an hour.
  *
- * Prefers the within-hour envelope, because that is what any verdict is
- * measured against, and falls back to the range of hourly means when recorder
- * has no five-minute detail left.
+ * This is the spread of hourly means, because the line drawn on it is a series
+ * of hourly means. Judging that line against the five-minute envelope would be
+ * a unit mismatch: an hourly mean is the average of twelve five-minute means,
+ * so its spread is smaller by up to the square root of twelve, and an envelope
+ * built from five-minute data is roughly four times too wide to ever be
+ * crossed.
  */
 export function bandBounds(band: BaselineHour): { low: number; high: number } {
+  return { low: band.low, high: band.high };
+}
+
+/** Bounds for judging a completed hour, matching the drawn band. */
+export function hourlyBounds(band: BaselineHour): { low: number; high: number } {
   return {
-    low: band.liveLow ?? band.low,
-    high: band.liveHigh ?? band.high,
+    low: band.low / DEVIATION_MARGIN,
+    high: band.high * DEVIATION_MARGIN,
   };
 }
 
 /**
- * The range outside which a reading counts as a departure, or null when there
- * is no envelope and therefore no defensible claim about an instant.
- *
- * Every caller that draws or describes a departure uses this, so the picture
- * and the sentence cannot disagree.
+ * Bounds for judging one instant, or null when there is no five-minute
+ * envelope and therefore no defensible claim about an instant.
  */
 export function deviationBounds(
   band: BaselineHour,
@@ -377,12 +382,20 @@ export function describeDeviation(
   };
 }
 
-/** Round a scale ceiling to 1, 2 or 5 times a power of ten. */
+/**
+ * Round a scale ceiling up to the next step on a fine ladder.
+ *
+ * A coarse 1/2/5 ladder turns a 5.5 kW peak into a 10 kW dial, and on a
+ * square-root radius that pushes an ordinary day into the innermost fifth of
+ * the plot. These steps keep the overshoot in single figures.
+ */
+const CEILING_STEPS = [1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+
 export function niceCeiling(value: number): number {
   if (!Number.isFinite(value) || value <= 0) return 1_000;
   const magnitude = 10 ** Math.floor(Math.log10(value));
   const normalised = value / magnitude;
-  const step = normalised <= 1 ? 1 : normalised <= 2 ? 2 : normalised <= 5 ? 5 : 10;
+  const step = CEILING_STEPS.find((candidate) => normalised <= candidate + 1e-9) ?? 10;
   return step * magnitude;
 }
 

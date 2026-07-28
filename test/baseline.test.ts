@@ -7,6 +7,7 @@ import {
   deviationBounds,
   fetchBaseline,
   fetchToday,
+  hourlyBounds,
   missingStatistics,
   niceCeiling,
 } from "../src/statistics";
@@ -336,15 +337,23 @@ describe("bandRuns", () => {
 });
 
 describe("niceCeiling", () => {
-  it("rounds up to one, two or five times a power of ten", () => {
-    expect(niceCeiling(1_100)).toBe(2_000);
-    expect(niceCeiling(2_400)).toBe(5_000);
-    expect(niceCeiling(5_100)).toBe(10_000);
+  it("rounds up to the next step on a fine ladder", () => {
+    expect(niceCeiling(1_100)).toBe(1_250);
+    expect(niceCeiling(2_400)).toBe(2_500);
+    expect(niceCeiling(5_100)).toBe(6_000);
     expect(niceCeiling(900)).toBe(1_000);
   });
 
+  it("keeps the overshoot small, so one outlier hour cannot squash the dial", () => {
+    // A coarse 1/2/5 ladder turned this into 10 kW, pushing an ordinary
+    // 400-1500 W day into the innermost fifth of the radius.
+    for (const value of [1_100, 2_400, 4_100, 5_500, 7_200, 9_100]) {
+      expect(niceCeiling(value) / value).toBeLessThan(1.25);
+    }
+  });
+
   it("is stable across small changes, so the scale does not creep", () => {
-    expect(niceCeiling(3_100)).toBe(niceCeiling(4_900));
+    expect(niceCeiling(5_100)).toBe(niceCeiling(5_900));
   });
 
   it("never rounds below its input, so a band cannot clip at the rim", () => {
@@ -360,15 +369,8 @@ describe("niceCeiling", () => {
 });
 
 describe("bandBounds", () => {
-  it("draws the envelope the verdict is judged against", () => {
-    expect(bandBounds(hour(5))).toEqual({ low: 50, high: 500 });
-  });
-
-  it("falls back to the range of hourly means with no envelope", () => {
-    expect(bandBounds({ ...hour(5), liveLow: null, liveHigh: null })).toEqual({
-      low: 100,
-      high: 300,
-    });
+  it("draws the spread of hourly means, matching the line drawn on it", () => {
+    expect(bandBounds(hour(5))).toEqual({ low: 100, high: 300 });
   });
 
   it("is the same range bandRuns plots, so drawn and judged cannot drift", () => {
@@ -377,14 +379,35 @@ describe("bandBounds", () => {
   });
 });
 
-describe("deviationBounds", () => {
-  it("widens the envelope by the margin before calling a departure", () => {
+describe("comparators", () => {
+  it("judges a completed hour against the spread of hourly means", () => {
+    const bounds = hourlyBounds(hour(5));
+    expect(bounds.high).toBeCloseTo(330);
+    expect(bounds.low).toBeCloseTo(90.91, 1);
+  });
+
+  it("judges an instant against the wider within-hour envelope", () => {
     const bounds = deviationBounds(hour(5));
     expect(bounds?.high).toBeCloseTo(550);
     expect(bounds?.low).toBeCloseTo(45.45);
   });
 
-  it("makes no claim without an envelope, so no tick can be drawn either", () => {
+  it("keeps the two apart, or an hourly mean could never look abnormal", () => {
+    // An hourly mean is the average of twelve five-minute means, so its spread
+    // is far narrower. Judging it against the instant envelope would make the
+    // trace permanently normal.
+    const hourly = hourlyBounds(hour(5));
+    const instant = deviationBounds(hour(5));
+    expect(instant?.high).toBeGreaterThan(hourly.high);
+    expect(instant?.low).toBeLessThan(hourly.low);
+  });
+
+  it("makes no instantaneous claim without an envelope", () => {
     expect(deviationBounds({ ...hour(5), liveLow: null, liveHigh: null })).toBeNull();
+  });
+
+  it("still judges completed hours when the envelope is gone", () => {
+    const bounds = hourlyBounds({ ...hour(5), liveLow: null, liveHigh: null });
+    expect(bounds.high).toBeCloseTo(330);
   });
 });
