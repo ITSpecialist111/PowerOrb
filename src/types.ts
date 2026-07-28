@@ -16,6 +16,9 @@ export interface HomeAssistant {
       eventType: string,
     ): Promise<() => void>;
   };
+  config?: {
+    time_zone?: string;
+  };
   locale?: {
     language?: string;
   };
@@ -62,10 +65,52 @@ export interface PowerSnapshot {
 
 export interface PowerInsights {
   selfPoweredPercent: number;
-  solarUsedPercent: number;
+  solarUsedPercent: number | null;
   netGridWatts: number;
   netBatteryWatts: number;
   recommendation: string;
+}
+
+export type StatisticsPeriod = "5minute" | "hour" | "day" | "week" | "month";
+
+export interface StatisticsRow {
+  start: number;
+  end: number;
+  mean?: number | null;
+}
+
+export interface StatisticsMetadata {
+  statistic_id: string;
+  display_unit_of_measurement?: string | null;
+  unit_class?: string | null;
+  has_mean?: boolean;
+}
+
+export interface BaselineHour {
+  hour: number;
+  low: number;
+  median: number;
+  high: number;
+  liveLow: number | null;
+  liveHigh: number | null;
+  samples: number;
+}
+
+export interface BandPoint {
+  hour: number;
+  low: number;
+  high: number;
+}
+
+export interface Baseline {
+  hours: (BaselineHour | null)[];
+  days: number;
+  status: "ok" | "provisional" | "learning";
+}
+
+export interface TodayHour {
+  hour: number;
+  watts: number;
 }
 
 export type EnergyFlowKind = "solar" | "grid" | "battery";

@@ -11,6 +11,14 @@ import type {
 
 type UnknownRecord = Record<string, unknown>;
 
+/**
+ * Below this a channel is treated as idle.
+ *
+ * Anything smaller also rounds away at the card's display precision, so a
+ * single constant keeps the label and the number from disagreeing.
+ */
+export const IDLE_WATTS = 25;
+
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null;
 }
@@ -250,21 +258,27 @@ export function entityPowerInWatts(entity: HassEntity | undefined): number | nul
   return unit === "w" || unit === undefined ? value : null;
 }
 
+/**
+ * Home load from every configured channel.
+ *
+ * All-or-nothing on purpose: dropping an unavailable channel would leave a
+ * number that looks plausible but omits a whole term, and it would no longer
+ * be comparable with the historical baseline, which discards partial buckets.
+ */
 export function totalPowerInWatts(
   states: Record<string, HassEntity>,
   channels: PowerChannel[],
 ): number | null {
+  if (channels.length === 0) return null;
   let total = 0;
-  let validChannels = 0;
 
   for (const channel of channels) {
     const value = entityPowerInWatts(states[channel.entityId]);
-    if (value === null) continue;
+    if (value === null) return null;
     total += value * channel.multiplier;
-    validChannels += 1;
   }
 
-  return validChannels > 0 ? Math.max(0, total) : null;
+  return Math.max(0, total);
 }
 
 export function flowPowerInWatts(
@@ -276,7 +290,7 @@ export function flowPowerInWatts(
 
   for (const channel of flow.channels) {
     const value = entityPowerInWatts(states[channel.entityId]);
-    if (value === null) continue;
+    if (value === null) return null;
     total += value * channel.multiplier;
     validChannels += 1;
   }
@@ -300,13 +314,16 @@ export function powerSnapshotInWatts(
 
   for (const channel of channels) {
     const rawPower = entityPowerInWatts(states[channel.entityId]);
-    if (rawPower === null) continue;
+    // All-or-nothing, matching totalPowerInWatts. A snapshot built from a
+    // surviving subset would give a confident breakdown of a load the card has
+    // already admitted it cannot measure.
+    if (rawPower === null) return null;
 
     const signedPower = rawPower * channel.multiplier;
     snapshot.activeChannels += 1;
 
     if (channel.role === "solar") {
-      snapshot.solar += Math.max(0, signedPower);
+      snapshot.solar += signedPower;
     } else if (channel.role === "grid" || channel.role === "grid_import") {
       if (signedPower >= 0) snapshot.gridImport += signedPower;
       else snapshot.gridExport += Math.abs(signedPower);
@@ -347,9 +364,9 @@ export function powerInsights(snapshot: PowerSnapshot): PowerInsights {
       ? percent((snapshot.homeLoad - snapshot.gridImport) / snapshot.homeLoad)
       : 100;
   const solarUsedPercent =
-    snapshot.solar > 0
+    snapshot.solar > IDLE_WATTS
       ? percent((snapshot.solar - snapshot.gridExport) / snapshot.solar)
-      : 0;
+      : null;
 
   let recommendation = "Waiting for enough live energy data.";
   if (snapshot.gridExport > 250) {

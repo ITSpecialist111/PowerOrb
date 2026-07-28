@@ -1,6 +1,7 @@
 import { LitElement, css, html, nothing, svg } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
+  IDLE_WATTS,
   configuredEnergyFlows,
   discoverEnergyFlows,
   discoverPowerChannels,
@@ -10,26 +11,92 @@ import {
   powerSnapshotInWatts,
   totalPowerInWatts,
 } from "./energy";
+import {
+  FULL_CONFIDENCE_DAYS,
+  PROVISIONAL_DAYS,
+  bandRuns,
+  describeDeviation,
+  fetchBaseline,
+  fetchToday,
+  fractionalHour,
+  missingStatistics,
+  niceCeiling,
+} from "./statistics";
 import type {
+  BandPoint,
+  Baseline,
   EnergyFlow,
   EnergyFlowKind,
   EnergyPreferences,
   HomeAssistant,
   PowerChannel,
   PowerOrbConfig,
-  PowerSnapshot,
+  TodayHour,
 } from "./types";
 
-const HISTORY_LENGTH = 60;
 const PREFERENCES_REFRESH_MS = 5 * 60 * 1_000;
+const TODAY_REFRESH_MS = 5 * 60 * 1_000;
+const BASELINE_REFRESH_MS = 60 * 60 * 1_000;
+const TICK_MS = 30 * 1_000;
+const COMPACT_WIDTH = 300;
+
+const VIEW = 400;
+const CENTRE = VIEW / 2;
+const RADIUS_OUT = 174;
+const RADIUS_IN = 80;
+const MIN_BAND = 5;
+
+/**
+ * Shared across card instances so one dashboard issues one query.
+ *
+ * The baseline and today's series have deliberately different lifetimes: the
+ * 28-day scan is expensive and only meaningful once an hour, while today's
+ * series gains a bucket every hour and is cheap to refresh.
+ */
+const baselineCache = new Map<string, Promise<Baseline>>();
+const todayCache = new Map<string, Promise<TodayHour[]>>();
+const metadataCache = new Map<string, Promise<string[]>>();
+
+interface HistoryBundle {
+  baseline: Baseline | null;
+  today: TodayHour[];
+  missing: string[];
+}
+
+function cached<T>(
+  store: Map<string, Promise<T>>,
+  prefix: string,
+  key: string,
+  build: () => Promise<T>,
+): Promise<T> {
+  const existing = store.get(key);
+  if (existing) return existing;
+  const request = build();
+  store.set(key, request);
+  for (const other of [...store.keys()]) {
+    if (other !== key && other.startsWith(prefix)) store.delete(other);
+  }
+  return request;
+}
+
+function polar(hour: number, radius: number): [number, number] {
+  const angle = (hour / 24) * Math.PI * 2 - Math.PI / 2;
+  return [CENTRE + radius * Math.cos(angle), CENTRE + radius * Math.sin(angle)];
+}
+
+function point(coords: [number, number]): string {
+  return `${coords[0].toFixed(2)},${coords[1].toFixed(2)}`;
+}
 
 @customElement("power-orb")
 export class PowerOrbCard extends LitElement {
   @property({ attribute: false })
   public set hass(value: HomeAssistant) {
+    const previous = this._hass;
     this._hass = value;
-    this.captureSample();
-    this.requestUpdate();
+    if (!previous || this.watchedChanged(previous, value)) {
+      this.requestUpdate();
+    }
   }
 
   public get hass(): HomeAssistant | undefined {
@@ -40,15 +107,25 @@ export class PowerOrbCard extends LitElement {
   @state() private flows: EnergyFlow[] = [];
   @state() private loading = true;
   @state() private error?: string;
-  @state() private samples: number[] = [];
+  @state() private baseline: Baseline | null = null;
+  @state() private today: TodayHour[] = [];
+  @state() private historyNote?: string;
+  @state() private compact = false;
+  /** Advances on a timer so the live bead keeps pace with the clock. */
+  @state() private now = Date.now();
 
   private _hass?: HomeAssistant;
   private config: PowerOrbConfig = { type: "custom:power-orb" };
   private unsubscribe?: () => void;
   private refreshTimer?: number;
+  private historyTimer?: number;
+  private tickTimer?: number;
   private connectionGeneration = 0;
   private connecting?: Promise<void>;
-  private lastSampleAt = 0;
+  private resizeObserver?: ResizeObserver;
+  private retryTimer?: number;
+  private historyAttempted = false;
+  private historyRetried = false;
 
   public setConfig(config: PowerOrbConfig): void {
     if (!config || config.type !== "custom:power-orb") {
@@ -69,7 +146,7 @@ export class PowerOrbCard extends LitElement {
     this.flows = configuredFlows;
     this.loading = !config.entity && config.entities === undefined;
     this.error = undefined;
-    this.samples = [];
+    this.resetHistory();
     this.disconnectData();
     if (this.isConnected && this._hass) void this.connect();
   }
@@ -88,28 +165,50 @@ export class PowerOrbCard extends LitElement {
     min_rows: number;
     min_columns: number;
   } {
-    return {
-      rows: 10,
-      columns: 12,
-      min_rows: 8,
-      min_columns: 6,
-    };
+    return { rows: 10, columns: 12, min_rows: 8, min_columns: 6 };
   }
 
   public connectedCallback(): void {
     super.connectedCallback();
+    this.tickTimer = window.setInterval(() => {
+      this.now = Date.now();
+    }, TICK_MS);
+    this.resizeObserver = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0;
+      const compact = width > 0 && width < COMPACT_WIDTH;
+      if (compact !== this.compact) this.compact = compact;
+    });
+    this.resizeObserver.observe(this);
     if (this._hass) void this.connect();
   }
 
   public disconnectedCallback(): void {
     this.disconnectData();
+    if (this.tickTimer !== undefined) {
+      window.clearInterval(this.tickTimer);
+      this.tickTimer = undefined;
+    }
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
     super.disconnectedCallback();
   }
 
-  private connect(): Promise<void> {
-    if (!this._hass || this.config.entity || this.config.entities !== undefined) {
-      return Promise.resolve();
+  private watchedChanged(previous: HomeAssistant, next: HomeAssistant): boolean {
+    if (previous.locale !== next.locale) return true;
+    for (const channel of this.channels) {
+      if (previous.states[channel.entityId] !== next.states[channel.entityId]) {
+        return true;
+      }
     }
+    return false;
+  }
+
+  private get timeZone(): string | undefined {
+    return this._hass?.config?.time_zone;
+  }
+
+  private connect(): Promise<void> {
+    if (!this._hass) return Promise.resolve();
     if (this.connecting) return this.connecting;
 
     const generation = this.connectionGeneration;
@@ -122,6 +221,14 @@ export class PowerOrbCard extends LitElement {
   private async startDiscovery(generation: number): Promise<void> {
     await this.loadEnergyPreferences();
     if (generation !== this.connectionGeneration || !this._hass) return;
+
+    void this.loadHistory();
+    this.historyTimer = window.setInterval(
+      () => void this.loadHistory(true),
+      TODAY_REFRESH_MS,
+    );
+
+    if (this.config.entity || this.config.entities !== undefined) return;
 
     this.refreshTimer = window.setInterval(
       () => void this.loadEnergyPreferences(),
@@ -146,11 +253,24 @@ export class PowerOrbCard extends LitElement {
     this.connectionGeneration += 1;
     this.unsubscribe?.();
     this.unsubscribe = undefined;
-    if (this.refreshTimer !== undefined) {
-      window.clearInterval(this.refreshTimer);
-      this.refreshTimer = undefined;
+    for (const timer of [this.refreshTimer, this.historyTimer]) {
+      if (timer !== undefined) window.clearInterval(timer);
     }
+    if (this.retryTimer !== undefined) {
+      window.clearTimeout(this.retryTimer);
+      this.retryTimer = undefined;
+    }
+    this.refreshTimer = undefined;
+    this.historyTimer = undefined;
     this.connecting = undefined;
+  }
+
+  private resetHistory(): void {
+    this.baseline = null;
+    this.today = [];
+    this.historyNote = undefined;
+    this.historyAttempted = false;
+    this.historyRetried = false;
   }
 
   private async loadEnergyPreferences(): Promise<void> {
@@ -168,7 +288,6 @@ export class PowerOrbCard extends LitElement {
         this.channels.length === 0
           ? "Add real-time power sensors to your Energy dashboard."
           : undefined;
-      this.captureSample(true);
     } catch {
       this.error = "Power Orb could not read the Energy dashboard.";
     } finally {
@@ -176,26 +295,93 @@ export class PowerOrbCard extends LitElement {
     }
   }
 
-  private currentPower(): number | null {
-    if (!this._hass) return null;
-    if (this.config.entity) {
-      return entityPowerInWatts(this._hass.states[this.config.entity]);
-    }
-    return totalPowerInWatts(this._hass.states, this.channels);
-  }
+  private async loadHistory(refreshOnly = false): Promise<void> {
+    const hass = this._hass;
+    if (!hass || this.channels.length === 0) return;
+    if (refreshOnly && !this.historyAttempted) return;
+    this.historyAttempted = true;
 
-  private currentSnapshot(): PowerSnapshot | null {
-    if (!this._hass || this.config.entity) return null;
-    return powerSnapshotInWatts(this._hass.states, this.channels);
-  }
-
-  private captureSample(force = false): void {
     const now = Date.now();
-    if (!force && now - this.lastSampleAt < 1_000) return;
-    const power = this.currentPower();
-    if (power === null) return;
-    this.lastSampleAt = now;
-    this.samples = [...this.samples.slice(-(HISTORY_LENGTH - 1)), power];
+    const prefix = `${[...new Set(this.channels.map((c) => c.entityId))].sort().join("|")}::`;
+
+    try {
+      const missing = await cached(
+        metadataCache,
+        prefix,
+        `${prefix}${Math.floor(now / BASELINE_REFRESH_MS)}`,
+        () => missingStatistics(hass, this.channels),
+      );
+      if (missing.length > 0) {
+        this.applyHistory({ baseline: null, today: [], missing });
+        return;
+      }
+
+      const [baseline, today] = await Promise.all([
+        cached(
+          baselineCache,
+          prefix,
+          `${prefix}${Math.floor(now / BASELINE_REFRESH_MS)}`,
+          () => fetchBaseline(hass, this.channels, now, this.timeZone),
+        ),
+        cached(
+          todayCache,
+          prefix,
+          `${prefix}${Math.floor(now / TODAY_REFRESH_MS)}`,
+          () => fetchToday(hass, this.channels, now, this.timeZone),
+        ),
+      ]);
+      this.applyHistory({ baseline, today, missing: [] });
+      this.historyRetried = false;
+    } catch {
+      metadataCache.delete(`${prefix}${Math.floor(now / BASELINE_REFRESH_MS)}`);
+      baselineCache.delete(`${prefix}${Math.floor(now / BASELINE_REFRESH_MS)}`);
+      todayCache.delete(`${prefix}${Math.floor(now / TODAY_REFRESH_MS)}`);
+      if (!this.historyRetried) {
+        this.historyRetried = true;
+        this.retryTimer = window.setTimeout(() => void this.loadHistory(), 5_000);
+        return;
+      }
+      this.baseline = null;
+      this.today = [];
+      this.historyNote = "Baseline unavailable — could not read recorder history.";
+    }
+  }
+
+  private applyHistory(bundle: HistoryBundle): void {
+    if (bundle.missing.length > 0) {
+      this.baseline = null;
+      this.today = [];
+      this.historyNote =
+        bundle.missing.length === 1
+          ? `No recorder statistics for ${bundle.missing[0]} — baseline unavailable.`
+          : `No recorder statistics for ${bundle.missing.length} sensors — baseline unavailable.`;
+      return;
+    }
+
+    this.today = bundle.today;
+    const baseline = bundle.baseline;
+    if (!baseline || baseline.status === "learning") {
+      this.baseline = null;
+      this.historyNote = `Learning your normal — ${baseline?.days ?? 0} of ${PROVISIONAL_DAYS} days.`;
+      return;
+    }
+    this.baseline = baseline;
+    if (baseline.status === "provisional") {
+      this.historyNote = `Provisional baseline — ${baseline.days} of ${FULL_CONFIDENCE_DAYS} days.`;
+      return;
+    }
+    // The verdict needs five-minute statistics. They follow recorder's
+    // purge_keep_days, so a very short retention silently disables it.
+    const hasEnvelope = baseline.hours.some((hour) => hour?.liveHigh !== null);
+    this.historyNote = hasEnvelope
+      ? undefined
+      : "Not enough recorder detail for a live verdict — raise recorder purge_keep_days.";
+  }
+
+  private currentPower(): number | null {
+    // Both branches route through the same all-or-nothing, clamp-once
+    // derivation the historical baseline uses.
+    return this._hass ? totalPowerInWatts(this._hass.states, this.channels) : null;
   }
 
   private formatPower(watts: number): { value: string; unit: string } {
@@ -212,21 +398,226 @@ export class PowerOrbCard extends LitElement {
     };
   }
 
-  private sparkline() {
-    if (this.samples.length < 2) return nothing;
-    const max = Math.max(...this.samples, 1);
-    const denominator = Math.max(this.samples.length - 1, 1);
-    const points = this.samples
-      .map((value, index) => {
-        const x = (index / denominator) * 100;
-        const y = 38 - (value / max) * 34;
-        return `${x.toFixed(2)},${y.toFixed(2)}`;
-      })
-      .join(" ");
+  /**
+   * Quantised to a round ceiling and deliberately independent of the live
+   * reading, so one oven preheat cannot silently rescale the whole dial. A
+   * live spike beyond the ceiling clips at the rim.
+   */
+  private scaleMax(): number {
+    let max = this.config.max_power ?? 0;
+    for (const hour of this.baseline?.hours ?? []) {
+      if (!hour) continue;
+      // Both windows matter: the live envelope covers five days and the drawn
+      // band twenty-eight, so neither is reliably the larger. A ceiling below
+      // the band would clip it at the rim and collapse the deviation ticks.
+      max = Math.max(max, hour.high, hour.liveHigh ?? 0);
+    }
+    for (const entry of this.today) max = Math.max(max, entry.watts);
+    return niceCeiling(Math.max(max, 1_000));
+  }
+
+  /** Square root, so the overnight band stays visible against evening peaks. */
+  private radius(watts: number, max: number): number {
+    const ratio = Math.sqrt(Math.min(Math.max(watts, 0), max) / max);
+    return RADIUS_IN + (RADIUS_OUT - RADIUS_IN) * ratio;
+  }
+
+  /**
+   * Runs of consecutive hours that carry a baseline. The dial wraps across
+   * midnight; the cartesian strip cannot.
+   */
+  private bandRuns(wrap: boolean, source: "typical" | "live" = "typical"): BandPoint[][] {
+    return bandRuns(this.baseline?.hours ?? [], wrap, source);
+  }
+
+  /** True while the live reading is adjacent to the last completed hour. */
+  private beadJoinsTrace(now: number): boolean {
+    const last = this.today[this.today.length - 1];
+    if (!last) return false;
+    const delta = Math.floor(now) - last.hour;
+    return delta === 0 || delta === 1;
+  }
+
+  /** Consecutive runs of today's hours, so a recorder gap is not bridged. */
+  private traceRuns(): TodayHour[][] {
+    const runs: TodayHour[][] = [];
+    let run: TodayHour[] = [];
+    for (const entry of this.today) {
+      const previous = run[run.length - 1];
+      if (previous && entry.hour !== previous.hour + 1) {
+        runs.push(run);
+        run = [];
+      }
+      run.push(entry);
+    }
+    if (run.length > 0) runs.push(run);
+    return runs;
+  }
+
+  private renderBand(max: number) {
+    const build = (source: "typical" | "live") =>
+      this.bandRuns(true, source).map((run) => {
+        const outer = run.map((entry) => {
+          const inner = this.radius(entry.low, max);
+          const outerRadius = Math.max(this.radius(entry.high, max), inner + MIN_BAND);
+          return point(polar(entry.hour + 0.5, outerRadius));
+        });
+        const inner = [...run]
+          .reverse()
+          .map((entry) => point(polar(entry.hour + 0.5, this.radius(entry.low, max))));
+        return svg`<polygon class=${`band band-${source}`}
+          points=${[...outer, ...inner].join(" ")} />`;
+      });
+    // The envelope is drawn as an outline over the typical band. Either can be
+    // the wider of the two, since they come from different windows, so a fill
+    // would let one hide the other.
+    return [...build("typical"), ...build("live")];
+  }
+
+  /**
+   * Deviation is drawn as fixed-width radial ticks rather than a filled area,
+   * so the ink scales with the size of the deviation and not with the radius
+   * at which it happens to occur.
+   */
+  private renderTicks(max: number) {
+    const hours = this.baseline?.hours;
+    if (!hours) return nothing;
+    return this.today.map((entry) => {
+      const band = hours[entry.hour];
+      if (!band) return nothing;
+      const above = entry.watts > band.high;
+      const below = entry.watts < band.low;
+      if (!above && !below) return nothing;
+      const from = polar(entry.hour + 0.5, this.radius(above ? band.high : band.low, max));
+      const to = polar(entry.hour + 0.5, this.radius(entry.watts, max));
+      return svg`<line
+        class=${`tick ${above ? "above" : "below"}`}
+        x1=${from[0]} y1=${from[1]} x2=${to[0]} y2=${to[1]}
+      />`;
+    });
+  }
+
+  private tracePoints(max: number, live: number | null): string[] {
+    const runs = this.traceRuns().map((run) =>
+      run
+        .map((entry) => point(polar(entry.hour + 0.5, this.radius(entry.watts, max))))
+        .join(" "),
+    );
+    if (live !== null) {
+      const now = fractionalHour(this.now, this.timeZone);
+      const bead = point(polar(now, this.radius(live, max)));
+      const tail = runs[runs.length - 1];
+      if (tail && this.beadJoinsTrace(now)) {
+        runs[runs.length - 1] = `${tail} ${bead}`;
+      }
+    }
+    return runs.filter((run) => run.includes(" "));
+  }
+
+  private renderDial(live: number | null) {
+    const max = this.scaleMax();
+    const traces = this.tracePoints(max, live);
+    const now = fractionalHour(this.now, this.timeZone);
+    const bead = live === null ? null : polar(now, this.radius(live, max));
+    const scale = this.formatPower(max);
+
     return svg`
-      <svg class="sparkline" viewBox="0 0 100 42" preserveAspectRatio="none"
-        role="img" aria-label="Recent power trend">
-        <polyline points=${points}></polyline>
+      <svg class="dial" viewBox="0 0 ${VIEW} ${VIEW}" role="img"
+        aria-label=${this.summary(live)}>
+        <circle class="rim" cx=${CENTRE} cy=${CENTRE} r=${RADIUS_OUT} />
+        <circle class="rim" cx=${CENTRE} cy=${CENTRE} r=${RADIUS_IN} />
+        ${[0, 6, 12, 18].map((hour) => {
+          const from = polar(hour, RADIUS_IN);
+          const to = polar(hour, RADIUS_OUT);
+          const label = polar(hour, RADIUS_OUT + 15);
+          return svg`
+            <line class="spoke" x1=${from[0]} y1=${from[1]} x2=${to[0]} y2=${to[1]} />
+            <text class="hour" x=${label[0]} y=${label[1]}>${String(hour).padStart(2, "0")}</text>
+          `;
+        })}
+        ${this.renderBand(max)} ${this.renderTicks(max)}
+        ${traces.map((points) => svg`<polyline class="trace" points=${points} />`)}
+        ${bead
+          ? svg`
+              <circle class="bead-halo" cx=${bead[0]} cy=${bead[1]} r="11" />
+              <circle class="bead" cx=${bead[0]} cy=${bead[1]} r="6" />
+            `
+          : nothing}
+        <text class="scale" x=${CENTRE} y="14">${scale.value} ${scale.unit}</text>
+      </svg>
+    `;
+  }
+
+  private renderStrip(live: number | null) {
+    const max = this.scaleMax();
+    const width = 400;
+    const height = 170;
+    const floor = height - 22;
+    const span = floor - 18;
+    const y = (watts: number) =>
+      floor - span * Math.sqrt(Math.min(Math.max(watts, 0), max) / max);
+    const x = (hour: number) => (hour / 24) * width;
+    const scale = this.formatPower(max);
+    const hours = this.baseline?.hours;
+
+    const runs = ["typical" as const, "live" as const].flatMap((source) =>
+      this.bandRuns(false, source).map((run) => {
+        const top = run.map((entry) => {
+          const low = y(entry.low);
+          return `${x(entry.hour + 0.5)},${Math.min(y(entry.high), low - MIN_BAND)}`;
+        });
+        const bottom = [...run]
+          .reverse()
+          .map((entry) => `${x(entry.hour + 0.5)},${y(entry.low)}`);
+        return svg`<polygon class=${`band band-${source}`}
+          points=${[...top, ...bottom].join(" ")} />`;
+      }),
+    );
+
+    const ticks = hours
+      ? this.today.map((entry) => {
+          const band = hours[entry.hour];
+          if (!band) return nothing;
+          const above = entry.watts > band.high;
+          const below = entry.watts < band.low;
+          if (!above && !below) return nothing;
+          return svg`<line
+            class=${`tick ${above ? "above" : "below"}`}
+            x1=${x(entry.hour + 0.5)} y1=${y(above ? band.high : band.low)}
+            x2=${x(entry.hour + 0.5)} y2=${y(entry.watts)}
+          />`;
+        })
+      : nothing;
+
+    const traces = this.traceRuns().map((run) =>
+      run.map((entry) => `${x(entry.hour + 0.5)},${y(entry.watts)}`).join(" "),
+    );
+    const now = fractionalHour(this.now, this.timeZone);
+    const tail = traces[traces.length - 1];
+    if (live !== null && tail && this.beadJoinsTrace(now)) {
+      traces[traces.length - 1] = `${tail} ${x(now)},${y(live)}`;
+    }
+
+    return svg`
+      <svg class="strip" viewBox="0 0 ${width} ${height}" role="img"
+        aria-label=${this.summary(live)}>
+        ${[0, 6, 12, 18].map(
+          (hour) => svg`
+            <line class="spoke" x1=${x(hour)} y1="18" x2=${x(hour)} y2=${floor} />
+            <text class="hour" x=${x(hour) + 4} y=${height - 6}
+              text-anchor="start">${String(hour).padStart(2, "0")}</text>
+          `,
+        )}
+        ${runs} ${ticks}
+        ${traces
+          .filter((points) => points.includes(" "))
+          .map((points) => svg`<polyline class="trace" points=${points} />`)}
+        ${live !== null
+          ? svg`<circle class="bead" cx=${x(now)} cy=${y(live)} r="5" />`
+          : nothing}
+        <text class="scale" x="4" y="12" text-anchor="start">
+          ${scale.value} ${scale.unit}
+        </text>
       </svg>
     `;
   }
@@ -238,42 +629,30 @@ export class PowerOrbCard extends LitElement {
   }
 
   private flowLabel(kind: EnergyFlowKind, watts: number): string {
-    if (Math.abs(watts) < 1) return "idle";
+    if (Math.abs(watts) < IDLE_WATTS) return "idle";
     if (kind === "grid") return watts > 0 ? "importing" : "exporting";
     if (kind === "battery") return watts > 0 ? "supplying" : "charging";
-    return watts > 0 ? "generating" : "idle";
+    return "generating";
   }
 
-  private renderFlow(kind: EnergyFlowKind) {
-    const flow = this.flows.find((candidate) => candidate.kind === kind);
-    if (!flow) return nothing;
-
+  private renderChip(kind: EnergyFlowKind) {
+    if (!this.flows.some((flow) => flow.kind === kind)) return nothing;
     const watts = this.flowValue(kind);
     const formatted = watts === null ? undefined : this.formatPower(Math.abs(watts));
-    const active = watts !== null && Math.abs(watts) >= 1;
-    const speed = active
-      ? Math.max(0.9, 4.5 - Math.min(Math.abs(watts), 10_000) / 2_800)
-      : 0;
-    const direction = watts !== null && watts < 0 ? "outward" : "inward";
     const names: Record<EnergyFlowKind, string> = {
       solar: "Solar",
       grid: "Grid",
       battery: "Battery",
     };
-
     return html`
-      <div
-        class=${`flow flow-${kind} ${active ? direction : "idle"}`}
-        style=${`--flow-speed:${speed}s`}
-        aria-label=${`${names[kind]} ${formatted ? `${formatted.value} ${formatted.unit}, ${this.flowLabel(kind, watts ?? 0)}` : "unavailable"}`}
-      >
-        <span class="flow-icon" aria-hidden="true"></span>
-        <span class="flow-copy">
+      <div class=${`chip chip-${kind}`}>
+        <span class="dot" aria-hidden="true"></span>
+        <span class="chip-copy">
           <small>${names[kind]}</small>
           <strong
             >${formatted
               ? html`${formatted.value}<em>${formatted.unit}</em>`
-              : "ÔÇö"}</strong
+              : "—"}</strong
           >
           <span>${watts === null ? "unavailable" : this.flowLabel(kind, watts)}</span>
         </span>
@@ -281,121 +660,84 @@ export class PowerOrbCard extends LitElement {
     `;
   }
 
+  private deviation(live: number | null) {
+    if (live === null || !this.baseline) return null;
+    const hour = Math.floor(fractionalHour(this.now, this.timeZone));
+    return describeDeviation(live, this.baseline.hours[hour] ?? null);
+  }
+
+  private summary(live: number | null): string {
+    if (live === null) return "Home power unavailable";
+    const formatted = this.formatPower(live);
+    const deviation = this.deviation(live);
+    const base = `Home load ${formatted.value} ${formatted.unit}`;
+    return deviation ? `${base}, ${deviation.sentence.toLowerCase()}` : base;
+  }
+
   protected render() {
-    const power = this.currentPower();
-    const maxPower =
-      this.config.max_power ?? Math.max(...this.samples, power ?? 0, 5_000);
-    const intensity =
-      power === null ? 0 : Math.min(1, Math.max(0.08, power / maxPower));
-    const formatted = power === null ? undefined : this.formatPower(power);
-    const snapshot = this.currentSnapshot();
-    const insights = snapshot ? powerInsights(snapshot) : undefined;
+    const live = this.currentPower();
+    const formatted = live === null ? undefined : this.formatPower(live);
+    const deviation = this.deviation(live);
+    const snapshot =
+      this.config.entity || !this._hass
+        ? null
+        : powerSnapshotInWatts(this._hass.states, this.channels);
+    const selfPowered = snapshot ? powerInsights(snapshot).selfPoweredPercent : null;
 
     return html`
       <ha-card>
-        <div class="card" style=${`--intensity:${intensity}`}>
+        <div class=${`card ${this.compact ? "is-compact" : ""}`}>
           <header>
             <div>
-              <small>Energy constellation</small>
+              <small>Today against normal</small>
               <span>${this.config.name ?? "Power Orb"}</span>
             </div>
             <span class="status" title="Live data">
-              <i class=${power === null ? "offline" : ""}></i> live
+              <i class=${live === null ? "offline" : ""}></i> live
             </span>
           </header>
 
-          <div class=${`constellation ${this.config.entity ? "direct" : ""}`}>
-            <svg
-              class="flow-map"
-              viewBox="0 0 600 360"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-            >
-              ${(["solar", "grid", "battery"] as EnergyFlowKind[]).map(
-                (kind) => {
-                  if (!this.flows.some((flow) => flow.kind === kind)) {
-                    return nothing;
-                  }
-                  const paths: Record<EnergyFlowKind, string> = {
-                    solar: "M 105 78 C 185 78, 205 180, 300 180",
-                    grid: "M 495 78 C 415 78, 395 180, 300 180",
-                    battery: "M 105 286 C 185 286, 205 180, 300 180",
-                  };
-                  const watts = this.flowValue(kind);
-                  const active = watts !== null && Math.abs(watts) >= 1;
-                  const direction = watts !== null && watts < 0 ? "outward" : "inward";
-                  const speed = active
-                    ? Math.max(
-                        0.9,
-                        4.5 - Math.min(Math.abs(watts), 10_000) / 2_800,
-                      )
-                    : 0;
-                  return svg`
-                    <path class=${`track ${kind}`} d=${paths[kind]}></path>
-                    <path
-                      class=${`energy ${kind} ${active ? direction : "idle"}`}
-                      style=${`--flow-speed:${speed}s`}
-                      d=${paths[kind]}
-                    ></path>
-                  `;
-                },
-              )}
-            </svg>
-
-            ${this.config.entity
-              ? nothing
-              : html`
-                  ${this.renderFlow("solar")}
-                  ${this.renderFlow("grid")}
-                  ${this.renderFlow("battery")}
-                `}
-
-            <div class="home">
-              <div class="orb" aria-hidden="true">
-                <div class="facet"></div>
-                <div class="core"></div>
-                <div class="ring ring-one"></div>
-                <div class="ring ring-two"></div>
-              </div>
-              <div class="reading" aria-live="polite">
-                <small>Home</small>
-                ${formatted
-                  ? html`<strong>${formatted.value}</strong
-                      ><span>${formatted.unit}</span>`
-                  : html`<strong>ÔÇö</strong>`}
-                <em>live demand</em>
-              </div>
+          <div class="scene">
+            ${this.compact ? this.renderStrip(live) : this.renderDial(live)}
+            <div class="reading">
+              ${formatted
+                ? html`<strong>${formatted.value}</strong><span>${formatted.unit}</span>`
+                : html`<strong>—</strong>`}
+              <small>home now</small>
             </div>
           </div>
 
-          <div class="trend">
-            <span>60-second demand trace</span>
-            ${this.sparkline()}
+          <p
+            class=${`verdict ${deviation ? deviation.direction : "unknown"}`}
+            title=${deviation ? deviation.sentence : "Baseline not available yet"}
+          >
+            ${deviation ? deviation.sentence : "Comparing with your normal day"}
+          </p>
+
+          <div class="chips">
+            ${this.renderChip("solar")} ${this.renderChip("grid")}
+            ${this.renderChip("battery")}
+            ${selfPowered !== null
+              ? html`
+                  <div class="chip chip-self">
+                    <span class="dot" aria-hidden="true"></span>
+                    <span class="chip-copy">
+                      <small>Self powered</small>
+                      <strong>${selfPowered}<em>%</em></strong>
+                      <span>of home load</span>
+                    </span>
+                  </div>
+                `
+              : nothing}
           </div>
-          ${insights
-            ? html`
-                <section class="insights" aria-label="Automatic energy insights">
-                  <div>
-                    <span>Self powered</span>
-                    <strong>${insights.selfPoweredPercent}<small>%</small></strong>
-                  </div>
-                  <div>
-                    <span>Solar used</span>
-                    <strong>${insights.solarUsedPercent}<small>%</small></strong>
-                  </div>
-                  <p>${insights.recommendation}</p>
-                </section>
-              `
-            : nothing}
+
           ${this.loading
-            ? html`<p class="message">Discovering Energy dashboardÔÇª</p>`
+            ? html`<p class="message">Discovering Energy dashboard…</p>`
             : this.error
               ? html`<p class="message error">${this.error}</p>`
-              : html`<p class="message">
-                  ${this.config.entity
-                    ? this.config.entity
-                    : `${this.channels.length} live ${this.channels.length === 1 ? "sensor" : "sensors"}`}
-                </p>`}
+              : this.historyNote
+                ? html`<p class="message">${this.historyNote}</p>`
+                : nothing}
         </div>
       </ha-card>
     `;
@@ -408,38 +750,27 @@ export class PowerOrbCard extends LitElement {
       --orb-grid: #68a7ff;
       --orb-battery: #b68cff;
       --orb-home: #72f5dc;
+      --orb-above: #ff7a5c;
+      --orb-below: #a8e05f;
     }
     ha-card {
       overflow: hidden;
       background:
-        radial-gradient(circle at 50% 45%, rgba(45, 120, 126, 0.15), transparent 35%),
+        radial-gradient(circle at 50% 42%, rgba(45, 120, 126, 0.16), transparent 38%),
         radial-gradient(circle at 8% 0%, rgba(95, 68, 132, 0.16), transparent 34%),
         linear-gradient(145deg, #11121a, #08090e 60%, #0d1018);
       border: 1px solid rgba(255, 255, 255, 0.08);
-      color: var(--primary-text-color, #f7f8ff);
+      color: #f7f8ff;
     }
     .card {
-      min-height: 500px;
-      padding: 22px;
+      padding: 20px;
       position: relative;
       box-sizing: border-box;
-    }
-    .card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      opacity: 0.22;
-      background-image: radial-gradient(rgba(255, 255, 255, 0.32) 0.5px, transparent 0.5px);
-      background-size: 7px 7px;
-      mask-image: linear-gradient(to bottom, black, transparent 70%);
     }
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      position: relative;
-      z-index: 2;
     }
     header div {
       display: grid;
@@ -459,14 +790,13 @@ export class PowerOrbCard extends LitElement {
     }
     .status {
       padding: 6px 10px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.035);
       color: #a7abbd;
       font-size: 11px;
-      font-weight: 500;
       letter-spacing: 0.12em;
       text-transform: uppercase;
+      white-space: nowrap;
     }
     .status i {
       display: inline-block;
@@ -481,184 +811,100 @@ export class PowerOrbCard extends LitElement {
       background: #7f8b93;
       box-shadow: none;
     }
-    .constellation {
-      height: 350px;
-      margin-top: 8px;
+    .scene {
+      margin-top: 10px;
       position: relative;
-    }
-    .constellation.direct {
       display: grid;
       place-items: center;
     }
-    .flow-map {
-      position: absolute;
+    .dial {
       width: 100%;
-      height: 100%;
-      inset: 0;
-      overflow: visible;
+      max-width: 380px;
+      height: auto;
+      display: block;
     }
-    .flow-map path {
+    .strip {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .rim {
       fill: none;
-      vector-effect: non-scaling-stroke;
+      stroke: rgba(255, 255, 255, 0.1);
+      stroke-width: 1;
     }
-    .flow-map .track {
-      stroke: rgba(255, 255, 255, 0.08);
-      stroke-width: 2;
+    .spoke {
+      stroke: rgba(255, 255, 255, 0.2);
+      stroke-width: 1;
     }
-    .flow-map .energy {
-      stroke-width: 3;
-      stroke-linecap: round;
-      stroke-dasharray: 1 14;
-      animation: current var(--flow-speed) linear infinite;
-      filter: drop-shadow(0 0 5px currentColor);
-    }
-    .flow-map .energy.inward {
-      animation-direction: reverse;
-    }
-    .flow-map .energy.idle {
-      opacity: 0.2;
-      animation: none;
-    }
-    .flow-map .solar { color: var(--orb-solar); stroke: var(--orb-solar); }
-    .flow-map .grid { color: var(--orb-grid); stroke: var(--orb-grid); }
-    .flow-map .battery { color: var(--orb-battery); stroke: var(--orb-battery); }
-    .flow {
-      width: 116px;
-      min-height: 68px;
-      padding: 10px;
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      position: absolute;
-      z-index: 2;
-      box-sizing: border-box;
-      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
-      border-radius: 16px;
-      background: rgba(18, 20, 30, 0.76);
-      box-shadow: inset 0 1px rgba(255, 255, 255, 0.055), 0 14px 35px rgba(0, 0, 0, 0.22);
-      backdrop-filter: blur(12px);
-    }
-    .flow-solar,
-    .flow-grid,
-    .flow-battery {
-      transform: translate(-50%, -50%);
-    }
-    .flow-solar { top: 21.67%; left: 17.5%; color: var(--orb-solar); }
-    .flow-grid { top: 21.67%; left: 82.5%; color: var(--orb-grid); }
-    .flow-battery { top: 79.44%; left: 17.5%; color: var(--orb-battery); }
-    .flow-icon {
-      width: 12px;
-      height: 12px;
-      flex: 0 0 auto;
-      border: 2px solid currentColor;
-      border-radius: 50%;
-      box-shadow: 0 0 13px currentColor;
-    }
-    .flow-battery .flow-icon {
-      border-radius: 3px;
-    }
-    .flow-grid .flow-icon {
-      transform: rotate(45deg);
-      border-radius: 2px;
-    }
-    .flow-copy {
-      min-width: 0;
-      display: grid;
-    }
-    .flow-copy small,
-    .flow-copy > span {
-      color: #8f93a8;
-      font-size: 9px;
+    .hour,
+    .scale {
+      fill: #8b90a6;
+      font-size: 13px;
+      text-anchor: middle;
       letter-spacing: 0.08em;
-      text-transform: uppercase;
     }
-    .flow-copy strong {
-      margin: 2px 0;
-      color: #f7f8ff;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 16px;
-      font-weight: 650;
-      font-variant-numeric: tabular-nums;
+    .hour {
+      dominant-baseline: middle;
     }
-    .flow-copy em {
-      margin-left: 3px;
-      color: currentColor;
-      font-size: 9px;
-      font-style: normal;
+    .scale {
+      font-size: 12px;
     }
-    .home {
-      width: 174px;
-      height: 174px;
-      display: grid;
-      place-items: center;
-      position: absolute;
-      z-index: 3;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
+    .band {
+      fill: rgba(160, 178, 210, 0.24);
+      stroke: rgba(196, 212, 238, 0.55);
+      stroke-width: 1;
+      stroke-linejoin: round;
     }
-    .direct .home {
-      position: relative;
-      left: auto;
-      top: auto;
-      transform: none;
+    .band-live {
+      fill: none;
+      stroke: rgba(196, 212, 238, 0.34);
+      stroke-dasharray: 4 4;
     }
-    .orb {
-      width: 146px;
-      height: 146px;
-      position: absolute;
-      border-radius: 50%;
-      background:
-        linear-gradient(145deg, rgba(255, 255, 255, 0.12), transparent 38%),
-        radial-gradient(circle at 45% 42%, #26363c 0%, #111b22 44%, #06090d 76%);
-      border: 1px solid rgba(164, 255, 238, 0.24);
-      box-shadow:
-        0 0 calc(12px + 30px * var(--intensity)) rgba(85, 234, 211, calc(0.14 + 0.36 * var(--intensity))),
-        inset -22px -18px 34px rgba(0, 0, 0, 0.62);
-      transform: scale(calc(0.94 + 0.06 * var(--intensity)));
-      transition: box-shadow 0.8s ease, transform 0.8s ease;
+    .tick {
+      stroke-width: 4;
     }
-    .facet {
-      position: absolute;
-      inset: 9%;
-      border-radius: 42% 58% 48% 52%;
-      background:
-        linear-gradient(32deg, transparent 48%, rgba(145, 255, 235, 0.08) 49%, transparent 51%),
-        linear-gradient(145deg, transparent 47%, rgba(255, 255, 255, 0.07) 48%, transparent 50%);
-      transform: rotate(14deg);
+    .tick.above {
+      stroke: var(--orb-above);
+      stroke-dasharray: 3 3;
     }
-    .core {
-      position: absolute;
-      inset: 18%;
-      border-radius: 50%;
-      border: 1px solid rgba(155, 255, 237, 0.28);
-      animation: breathe 3s ease-in-out infinite;
+    .tick.below {
+      stroke: var(--orb-below);
     }
-    .ring {
-      position: absolute;
-      inset: -12px;
-      border: 1px solid rgba(114, 245, 220, 0.3);
-      border-radius: 50%;
-      transform: rotateX(68deg) rotateZ(12deg);
+    .trace {
+      fill: none;
+      stroke: var(--orb-home);
+      stroke-width: 2.5;
+      stroke-linejoin: round;
+      stroke-linecap: round;
     }
-    .ring-two {
-      inset: -22px 2px;
-      transform: rotateY(67deg) rotateZ(-22deg);
-      animation: orbit 8s linear infinite;
+    .bead {
+      fill: var(--orb-home);
+    }
+    .bead-halo {
+      fill: none;
+      stroke: var(--orb-home);
+      stroke-width: 2;
+      opacity: 0.5;
+      animation: pulse 2.4s ease-out infinite;
     }
     .reading {
       position: absolute;
-      z-index: 2;
       display: grid;
       grid-template-columns: auto auto;
       align-items: baseline;
+      justify-content: center;
       gap: 5px;
       text-align: center;
-      text-shadow: 0 2px 12px #001b18;
+      pointer-events: none;
+    }
+    .is-compact .reading {
+      position: static;
+      margin-top: 4px;
     }
     .reading strong {
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 31px;
+      font-size: 34px;
       line-height: 1;
       font-variant-numeric: tabular-nums;
     }
@@ -666,118 +912,122 @@ export class PowerOrbCard extends LitElement {
       font-size: 15px;
       font-weight: 600;
     }
-    .reading small,
-    .reading em {
+    .reading small {
       grid-column: 1 / -1;
-      color: rgba(221, 255, 249, 0.76);
+      margin-top: 6px;
+      color: rgba(221, 255, 249, 0.72);
       font-size: 9px;
-      font-style: normal;
       letter-spacing: 0.14em;
       text-transform: uppercase;
     }
-    .reading small { margin-bottom: 5px; }
-    .reading em { margin-top: 6px; }
-    .trend {
-      height: 54px;
-      padding: 7px 10px 0;
-      position: relative;
-      border: 1px solid rgba(255, 255, 255, 0.06);
+    .verdict {
+      margin: 12px 0 0;
+      padding: 9px 12px;
       border-radius: 12px;
-      background: rgba(255, 255, 255, 0.025);
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      font-size: 13px;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .trend > span {
-      position: absolute;
-      color: #74788d;
-      font-size: 8px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
+    .verdict.above {
+      color: var(--orb-above);
     }
-    .sparkline {
-      display: block;
-      width: 100%;
-      height: 42px;
-      opacity: 0.75;
+    .verdict.below {
+      color: var(--orb-below);
     }
-    .sparkline polyline {
-      fill: none;
-      stroke: var(--orb-home);
-      stroke-width: 1.5;
-      vector-effect: non-scaling-stroke;
+    .verdict.unknown {
+      color: #9aa0b4;
     }
-    .insights {
+    .chips {
       display: grid;
-      grid-template-columns: minmax(78px, 0.45fr) minmax(78px, 0.45fr) minmax(0, 1.3fr);
+      grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
       gap: 8px;
       margin-top: 8px;
-      align-items: stretch;
     }
-    .insights div,
-    .insights p {
-      margin: 0;
-      padding: 10px;
+    .chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 10px;
       border-radius: 12px;
-      background: rgba(255, 255, 255, 0.055);
+      background: rgba(20, 22, 32, 0.9);
       box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
     }
-    .insights span {
-      display: block;
-      color: var(--secondary-text-color, #aab8c2);
-      font-size: 10px;
+    .chip-solar {
+      color: var(--orb-solar);
+    }
+    .chip-grid {
+      color: var(--orb-grid);
+    }
+    .chip-battery {
+      color: var(--orb-battery);
+    }
+    .chip-self {
+      color: var(--orb-home);
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      flex: 0 0 auto;
+      border: 2px solid currentColor;
+      border-radius: 50%;
+    }
+    .chip-battery .dot {
+      border-radius: 3px;
+    }
+    .chip-grid .dot {
+      transform: rotate(45deg);
+      border-radius: 2px;
+    }
+    .chip-copy {
+      min-width: 0;
+      display: grid;
+    }
+    .chip-copy small,
+    .chip-copy > span {
+      color: #8f93a8;
+      font-size: 9px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .insights strong {
-      display: block;
-      margin-top: 5px;
-      font-size: 22px;
-      line-height: 1;
+    .chip-copy strong {
+      margin: 2px 0;
+      color: #f7f8ff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 15px;
       font-variant-numeric: tabular-nums;
     }
-    .insights small {
-      margin-left: 2px;
-      font-size: 11px;
-    }
-    .insights p {
-      color: var(--primary-text-color, #f4fbff);
-      font-size: 12px;
-      line-height: 1.35;
+    .chip-copy em {
+      margin-left: 3px;
+      color: currentColor;
+      font-size: 9px;
+      font-style: normal;
     }
     .message {
-      min-height: 16px;
       margin: 8px 0 0;
-      color: var(--secondary-text-color, #aab8c2);
-      font-size: 12px;
+      color: #9aa0b4;
+      font-size: 11px;
       text-align: center;
     }
     .message.error {
       color: var(--error-color, #ff7b7b);
     }
-    @keyframes breathe {
-      50% { transform: scale(1.08); opacity: 0.65; }
-    }
-    @keyframes orbit {
-      to { transform: rotateY(67deg) rotateZ(338deg); }
-    }
-    @keyframes current {
-      to { stroke-dashoffset: 30; }
-    }
-    @media (max-width: 560px) {
-      .constellation { height: 320px; }
-      .flow { width: 100px; padding: 8px; gap: 7px; }
-      .home { width: 146px; height: 146px; }
-      .orb { width: 118px; height: 118px; }
-      .reading strong { font-size: 26px; }
-    }
-    @media (max-width: 430px) {
-      .card { padding: 17px; }
-      .flow { width: 104px; padding: 8px; }
-      .flow-copy strong { font-size: 14px; }
-      .insights { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .insights p { grid-column: 1 / -1; }
+    @keyframes pulse {
+      to {
+        opacity: 0;
+        stroke-width: 5;
+      }
     }
     @media (prefers-reduced-motion: reduce) {
-      .core, .ring-two, .flow-map .energy { animation: none; }
-      .flow-map .energy { stroke-dasharray: none; opacity: 0.65; }
+      .bead-halo {
+        animation: none;
+        opacity: 0.35;
+      }
     }
   `;
 }
@@ -793,7 +1043,7 @@ if (!window.customCards.some((card) => card.type === "power-orb")) {
   window.customCards.push({
     type: "power-orb",
     name: "Power Orb",
-    description: "Live home power from the Home Assistant Energy dashboard",
+    description: "Live home power compared with your own normal day",
     documentationURL: "https://github.com/ITSpecialist111/PowerOrb",
     preview: true,
   });

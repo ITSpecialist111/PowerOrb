@@ -332,6 +332,23 @@ describe("power calculations", () => {
     });
   });
 
+  it("refuses to report a snapshot with a channel missing", () => {
+    const channels = [
+      { entityId: "sensor.solar", multiplier: 1, role: "solar" as const },
+      { entityId: "sensor.grid", multiplier: 1, role: "grid" as const },
+    ];
+    const states = {
+      "sensor.solar": { state: "1000", attributes: { unit_of_measurement: "W" } },
+      "sensor.grid": { state: "unavailable", attributes: {} },
+    };
+    // A breakdown of a load the card cannot measure would be worse than none.
+    expect(powerSnapshotInWatts(states, channels)).toBeNull();
+    expect(totalPowerInWatts(states, channels)).toBeNull();
+    expect(
+      flowPowerInWatts(states, { kind: "grid", channels }),
+    ).toBeNull();
+  });
+
   it("derives automatic self-power and solar-use insights", () => {
     expect(
       powerInsights({
