@@ -380,10 +380,13 @@ describe("bandBounds", () => {
 });
 
 describe("comparators", () => {
-  it("judges a completed hour against the spread of hourly means", () => {
+  it("judges a completed hour a fixed distance outside the drawn ring", () => {
+    // The grace is in band widths, so it is the same number of pixels for
+    // every hour. A multiplicative margin would give a tight, high-level hour
+    // a grace zone spanning the whole dial.
     const bounds = hourlyBounds(hour(5));
-    expect(bounds.high).toBeCloseTo(330);
-    expect(bounds.low).toBeCloseTo(90.91, 1);
+    expect(bounds.high).toBeCloseTo(320);
+    expect(bounds.low).toBeCloseTo(80);
   });
 
   it("judges an instant against the wider within-hour envelope", () => {
@@ -408,6 +411,6 @@ describe("comparators", () => {
 
   it("still judges completed hours when the envelope is gone", () => {
     const bounds = hourlyBounds({ ...hour(5), liveLow: null, liveHigh: null });
-    expect(bounds.high).toBeCloseTo(330);
+    expect(bounds.high).toBeCloseTo(320);
   });
 });

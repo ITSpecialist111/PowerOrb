@@ -5,16 +5,23 @@ normal?**
 
 Every energy card in the ecosystem shows you what is happening right now. Power
 Orb shows you what is happening right now *against your own household's normal
-day*. It draws a 24-hour dial where the angle is the time of day, the radius is
-power, and three layers sit on the same geometry:
+day*. It draws a 24-hour dial where the angle is the time of day and the radius
+is **how far a reading sits from what that hour usually draws**:
 
-- **The band** — the range your home usually draws at each hour, from the 10th
-  to the 90th percentile of the last 28 days.
-- **Today's line** — what you actually drew, hour by hour, from midnight.
+- **The ring** — the range your home usually draws at each hour, from the 10th
+  to the 90th percentile of the last 28 days. Because every hour is normalised
+  onto the same ring, normal is a **circle**.
+- **Today's line** — what you actually drew, hour by hour, from midnight,
+  coloured by how each hour compared.
 - **The bead** — your live reading right now, at the current angle.
 
-Where today leaves the band, a tick marks how far. Underneath, one sentence:
-*"30% above normal for 19:00–20:00"*, or simply *"Normal for 19:00–20:00"*.
+That normalisation is the point. A household drawing 400 W overnight and 6 kW
+while the car charges has a ten-to-one range that no absolute scale flatters;
+here both are ordinary, so both sit on the ring, and a departure is a shape the
+eye catches instantly.
+
+Underneath, one sentence: *"30% above the usual range for 19:00–20:00"*, or
+simply *"Normal for 19:00–20:00"*.
 
 It uses the power sensors already configured in Home Assistant's Energy
 dashboard, so it needs no server, access token, or duplicate entity
@@ -34,10 +41,11 @@ runs inside Home Assistant and uses its authenticated frontend API.
 ## Features
 
 - Compares live household load with its own 28-day baseline for the same hour
+- Band-relative radius: every hour's usual range lands on one ring, so a
+  ten-to-one daily range stays readable
 - Angle-as-time-of-day dial; no purpose-built Home Assistant card uses this
   encoding, though a generic charting card such as plotly-graph-card can be
   configured to approximate it
-- Square-root radial scale, so the overnight band stays visible beside evening peaks
 - Deviation drawn as fixed-width ticks, so a deviation at 03:00 draws as much
   ink as the same deviation at 19:00
 - Automatically discovers solar, grid, battery and home power
@@ -57,34 +65,37 @@ for every configured power sensor.
 
 | Situation | What you see |
 | --- | --- |
-| No statistics for one or more sensors | Dial and live reading only, and a note naming what is missing |
-| Fewer than 7 days of history | "Learning your normal — N of 7 days" |
-| 7 to 13 days | Band drawn, marked provisional |
+| No statistics for one or more sensors | Today's line and the live reading on an absolute scale, no ring, and a note naming what is missing |
+| Fewer than 7 days of history | "Learning your normal — N of 7 days", same absolute fallback |
+| 7 to 13 days | Ring drawn, marked provisional |
 | 14 days or more | Full behaviour |
-| An hour with fewer than 10 past samples | That hour is left as a gap, never interpolated |
+| An hour with fewer than 10 past samples | That hour is left as a gap in the ring, never interpolated |
 | Baseline median below 50 W | Sentence suppressed; a percentage of nearly nothing is meaningless |
-| `recorder` keeping fewer than about 2 days of five-minute statistics | Band drawn, verdict suppressed, with a note asking you to raise `purge_keep_days` |
+| `recorder` keeping fewer than about 2 days of five-minute statistics | Ring drawn, verdict suppressed, with a note asking you to raise `purge_keep_days` |
 
-The comparison is deliberately conservative. The band is the spread seen
-*within* past hours rather than the spread of hourly averages, with a further
-10% margin before a departure is called, so ordinary appliance cycling is
-unlikely to read as abnormal. It is not immune: the band is built from
-five-minute means, which still smooth a short burst, so a kettle or an
-induction hob can occasionally tip the verdict. The reported figure is measured
-against the boundary that was actually crossed, not the median — crossing a
-1.6 kW upper bound at 1.74 kW is reported as 10% above, not as a multiple of a
-much lower median.
+The comparison is deliberately conservative, and it uses two ranges because it
+is answering two different questions.
 
-**One band, one comparator.** The range that is drawn is exactly the range the
-verdict is judged against, so the picture and the sentence cannot disagree.
-Today's line is coloured by how each hour compared: teal inside the band, warm
-above it, cool below. Where it leaves the band a tick also marks how far —
-including for the hour in progress, so whatever the sentence names is always
-visible on the dial. Hours not yet lived are shaded, so the dial visibly fills
-through the day.
+| What is judged | Against | Why |
+| --- | --- | --- |
+| A completed hour, drawn as today's line | The spread of hourly means, plus a tenth of a band width | An hourly mean can only sensibly be compared with other hourly means |
+| The live reading, drawn as the bead | The spread of five-minute values within past instances of this hour, plus 10% | An instant is not an average; judging it against hourly means would flag every kettle |
 
-If recorder has no five-minute detail left, the band falls back to the range of
-hourly means and the verdict is suppressed rather than computed from a
+The ring is the first of those, so today's line and the ring always agree. The
+second is drawn as a short bracket at the current angle only, where it applies,
+so the bead and the sentence always agree too. Neither is immune: the envelope
+is built from five-minute means, which still smooth a short burst, so a kettle
+or an induction hob can occasionally tip the verdict. The reported figure is
+measured against the boundary that was actually crossed, not the median.
+
+Today's line is coloured by how each hour compared — teal inside the ring, warm
+above it, cool below — and a tick marks how far. Hours not yet lived are left
+unshaded, so the dial visibly fills through the day. A reading more than six
+band widths out is pinned to the edge of the plot; hover or a screen reader
+recovers the exact figure.
+
+If recorder has no five-minute detail left, the ring and today's line still
+work and the live verdict is suppressed rather than computed from a
 distribution that cannot describe an instant.
 
 ## Installation
@@ -119,16 +130,13 @@ are valid HACS Dashboard sources.
 | `name` | string | `Power Orb` | Card heading |
 | `entity` | string | auto-discovered | Direct instantaneous power sensor |
 | `entities` | mapping | auto-discovered | Explicit solar, grid, and battery power sensors |
-| `max_power` | number | derived | Fixes the radial scale ceiling instead of deriving it |
+| `max_power` | number | derived | Scale ceiling used only while there is no baseline yet |
 | `unit` | `W` or `kW` | automatic | Display unit |
 
-Left unset, the ceiling is the largest of the baseline's upper envelope and
-today's peak, rounded up to 1, 2 or 5 times a power of ten. It excludes the
-live reading on purpose, so a single spike cannot rescale the dial under you;
-a reading beyond the ceiling clips at the rim. Setting `max_power` replaces
-that derivation outright — useful for pinning the scale across several cards,
-but a value far above your real load will squash the band into the middle of
-the dial.
+Once a baseline exists the dial is band-relative and has no absolute ceiling,
+so `max_power` is ignored. Before then — during the first week, or where
+recorder has no statistics — the dial falls back to an absolute scale so today
+is still drawn, and `max_power` fixes that scale.
 
 Example:
 

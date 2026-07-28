@@ -308,12 +308,18 @@ export function bandBounds(band: BaselineHour): { low: number; high: number } {
   return { low: band.low, high: band.high };
 }
 
-/** Bounds for judging a completed hour, matching the drawn band. */
+/**
+ * Bounds for judging a completed hour, matching the drawn ring.
+ *
+ * The grace is measured in band widths rather than watts, so it is the same
+ * distance on the plot for every hour. A multiplicative margin would give a
+ * tight, high-level hour such as an off-peak car charge a grace zone spanning
+ * the entire dial.
+ */
 export function hourlyBounds(band: BaselineHour): { low: number; high: number } {
-  return {
-    low: band.low / DEVIATION_MARGIN,
-    high: band.high * DEVIATION_MARGIN,
-  };
+  const bounds = bandBounds(band);
+  const slack = bandWidth(bounds) * BAND_MARGIN;
+  return { low: bounds.low - slack, high: bounds.high + slack };
 }
 
 /**
@@ -382,13 +388,57 @@ export function describeDeviation(
   };
 }
 
+/** Where the usual range sits in the plot, as a fraction of the drawable span. */
+export const BAND_LOW_UNIT = 0.36;
+export const BAND_HIGH_UNIT = 0.64;
+/** How many band widths beyond the range reach the edge of the plot. */
+export const TAIL_BANDS = 6;
+/** Floor on a band width, so a very tight hour is not infinitely sensitive. */
+export const MIN_BAND_WATTS = 60;
+/** Grace outside the range before a completed hour counts as a departure. */
+export const BAND_MARGIN = 0.1;
+
+export function bandWidth(bounds: { low: number; high: number }): number {
+  return Math.max(bounds.high - bounds.low, MIN_BAND_WATTS);
+}
+
 /**
- * Round a scale ceiling up to the next step on a fine ladder.
+ * Where a reading sits relative to an hour's usual range.
  *
- * A coarse 1/2/5 ladder turns a 5.5 kW peak into a 10 kW dial, and on a
- * square-root radius that pushes an ordinary day into the innermost fifth of
- * the plot. These steps keep the overshoot in single figures.
+ * 0 is the bottom of the range and 1 the top, so values outside are measured
+ * in band widths rather than watts.
  */
+export function bandPosition(
+  watts: number,
+  bounds: { low: number; high: number },
+): number {
+  return (watts - bounds.low) / bandWidth(bounds);
+}
+
+/**
+ * Map a band position onto the plot, 0 at the inner edge and 1 at the outer.
+ *
+ * Every hour's usual range lands on the same two values, which is the whole
+ * point: normal becomes a circle, and a household whose load runs from 400 W
+ * overnight to 6 kW while the car charges can still be read at a glance.
+ * Outside the range the scale compresses, so an extreme hour stays on the
+ * plot instead of pinning the scale for everything else.
+ */
+export function bandUnit(position: number): number {
+  const span = BAND_HIGH_UNIT - BAND_LOW_UNIT;
+  if (position >= 0 && position <= 1) {
+    return BAND_LOW_UNIT + span * position;
+  }
+  const knee = Math.asinh(TAIL_BANDS);
+  if (position > 1) {
+    const tail = Math.min(1, Math.asinh(position - 1) / knee);
+    return BAND_HIGH_UNIT + (1 - BAND_HIGH_UNIT) * tail;
+  }
+  const tail = Math.min(1, Math.asinh(-position) / knee);
+  return BAND_LOW_UNIT - BAND_LOW_UNIT * tail;
+}
+
+/** Round a scale ceiling up to the next step on a fine ladder. */
 const CEILING_STEPS = [1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
 
 export function niceCeiling(value: number): number {
