@@ -295,13 +295,43 @@ function hourLabel(hour: number): string {
 export const DEVIATION_MARGIN = 1.1;
 
 /**
+ * The range to draw for an hour.
+ *
+ * Prefers the within-hour envelope, because that is what any verdict is
+ * measured against, and falls back to the range of hourly means when recorder
+ * has no five-minute detail left.
+ */
+export function bandBounds(band: BaselineHour): { low: number; high: number } {
+  return {
+    low: band.liveLow ?? band.low,
+    high: band.liveHigh ?? band.high,
+  };
+}
+
+/**
+ * The range outside which a reading counts as a departure, or null when there
+ * is no envelope and therefore no defensible claim about an instant.
+ *
+ * Every caller that draws or describes a departure uses this, so the picture
+ * and the sentence cannot disagree.
+ */
+export function deviationBounds(
+  band: BaselineHour,
+): { low: number; high: number } | null {
+  if (band.liveLow === null || band.liveHigh === null) return null;
+  return {
+    low: band.liveLow / DEVIATION_MARGIN,
+    high: band.liveHigh * DEVIATION_MARGIN,
+  };
+}
+
+/**
  * Compare the live figure with the band for the hour it falls in.
  *
- * The test uses the within-hour envelope, so ordinary appliance cycling does
- * not read as abnormal, and the reported figure is measured against the
- * boundary that was actually crossed rather than the median. Quoting a
- * multiple of the median would overstate: crossing a p90 of 1.6 kW at 1.74 kW
- * is a 9% departure, not the 3.5x that the median implies.
+ * The reported figure is measured against the boundary that was actually
+ * crossed rather than the median. Quoting a multiple of the median would
+ * overstate: crossing a p90 of 1.6 kW at 1.74 kW is a 9% departure, not the
+ * 3.5x the median implies.
  */
 export function describeDeviation(
   watts: number,
@@ -309,19 +339,17 @@ export function describeDeviation(
 ): Deviation | null {
   if (!band) return null;
   if (band.median < 50) return null;
-  // No within-hour envelope means no defensible claim about an instant.
-  if (band.liveLow === null || band.liveHigh === null) return null;
+  const bounds = deviationBounds(band);
+  if (!bounds) return null;
 
   const label = hourLabel(band.hour);
-  const high = band.liveHigh * DEVIATION_MARGIN;
-  const low = band.liveLow / DEVIATION_MARGIN;
-  if (watts >= low && watts <= high) {
+  if (watts >= bounds.low && watts <= bounds.high) {
     return { ratio: 1, direction: "normal", sentence: `Normal for ${label}` };
   }
 
-  const above = watts > high;
+  const above = watts > bounds.high;
   const direction = above ? "above" : "below";
-  const boundary = Math.max(above ? band.liveHigh : band.liveLow, 1);
+  const boundary = Math.max(above ? band.liveHigh! : band.liveLow!, 1);
   const ratio = watts / boundary;
 
   if (above && ratio >= 2) {
@@ -361,30 +389,24 @@ export function niceCeiling(value: number): number {
 /**
  * Group the baseline into runs of consecutive hours.
  *
- * On a dial, hour 23 and hour 0 are adjacent, so `wrap` joins a complete or
- * midnight-spanning run into one closed ring by continuing past hour 24. A
- * cartesian strip has no such adjacency and must be built with `wrap` off,
- * otherwise the continued hours land beyond the right-hand edge.
- *
- * `source` selects the typical range of hourly means or the wider envelope of
- * instantaneous readings the verdict is actually judged against.
+ * `wrap` joins a complete or midnight-spanning run into one closed ring by
+ * continuing past hour 24. A cartesian strip has no such adjacency and must be
+ * built with `wrap` off, otherwise the continued hours land beyond the
+ * right-hand edge.
  */
 export function bandRuns(
   hours: (BaselineHour | null)[],
   wrap: boolean,
-  source: "typical" | "live" = "typical",
 ): BandPoint[][] {
   const runs: BandPoint[][] = [];
   let run: BandPoint[] = [];
   for (const hour of hours) {
-    const low = source === "live" ? hour?.liveLow : hour?.low;
-    const high = source === "live" ? hour?.liveHigh : hour?.high;
-    if (!hour || low === null || low === undefined || high === null || high === undefined) {
+    if (!hour) {
       if (run.length > 0) runs.push(run);
       run = [];
       continue;
     }
-    run.push({ hour: hour.hour, low, high });
+    run.push({ hour: hour.hour, ...bandBounds(hour) });
   }
   if (run.length > 0) runs.push(run);
 
@@ -392,11 +414,7 @@ export function bandRuns(
 
   const first = runs[0];
   const last = runs[runs.length - 1];
-  const ends =
-    source === "live"
-      ? hours[0]?.liveLow !== null && hours[23]?.liveLow !== null
-      : true;
-  if (!first || !last || !hours[0] || !hours[23] || !ends) return runs;
+  if (!first || !last || !hours[0] || !hours[23]) return runs;
 
   if (runs.length === 1) {
     const head = first[0];

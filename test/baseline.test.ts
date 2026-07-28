@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   MIN_BUCKET_SAMPLES,
+  bandBounds,
   bandRuns,
   bucketLoad,
+  deviationBounds,
   fetchBaseline,
   fetchToday,
   missingStatistics,
@@ -357,41 +359,32 @@ describe("niceCeiling", () => {
   });
 });
 
-describe("bandRuns live envelope", () => {
-  it("emits the wider envelope when asked for it", () => {
-    const runs = bandRuns(hours([5]), false, "live");
-    expect(runs[0]?.[0]).toEqual({ hour: 5, low: 50, high: 500 });
+describe("bandBounds", () => {
+  it("draws the envelope the verdict is judged against", () => {
+    expect(bandBounds(hour(5))).toEqual({ low: 50, high: 500 });
   });
 
-  it("skips hours with no envelope rather than falling back to the band", () => {
-    const withGap = hours([4, 5, 6]);
-    const middle = withGap[5];
-    if (middle) {
-      middle.liveLow = null;
-      middle.liveHigh = null;
-    }
-    const runs = bandRuns(withGap, false, "live");
-    expect(runs.map((run) => run.map((entry) => entry.hour))).toEqual([[4], [6]]);
-    // The typical band is unaffected by a missing envelope.
-    expect(bandRuns(withGap, false).flat()).toHaveLength(3);
+  it("falls back to the range of hourly means with no envelope", () => {
+    expect(bandBounds({ ...hour(5), liveLow: null, liveHigh: null })).toEqual({
+      low: 100,
+      high: 300,
+    });
   });
 
-  it("closes the envelope ring on the dial when every hour has one", () => {
-    const all = Array.from({ length: 24 }, (_, index) => index);
-    const runs = bandRuns(hours(all), true, "live");
-    expect(runs).toHaveLength(1);
-    expect(runs[0]).toHaveLength(25);
-    expect(runs[0]?.[24]).toEqual({ hour: 24, low: 50, high: 500 });
+  it("is the same range bandRuns plots, so drawn and judged cannot drift", () => {
+    const runs = bandRuns(hours([5]), false);
+    expect(runs[0]?.[0]).toEqual({ hour: 5, ...bandBounds(hour(5)) });
+  });
+});
+
+describe("deviationBounds", () => {
+  it("widens the envelope by the margin before calling a departure", () => {
+    const bounds = deviationBounds(hour(5));
+    expect(bounds?.high).toBeCloseTo(550);
+    expect(bounds?.low).toBeCloseTo(45.45);
   });
 
-  it("leaves the envelope ring open when either end lacks one", () => {
-    const withEnds = hours(Array.from({ length: 24 }, (_, index) => index));
-    const midnight = withEnds[0];
-    if (midnight) {
-      midnight.liveLow = null;
-      midnight.liveHigh = null;
-    }
-    const runs = bandRuns(withEnds, true, "live");
-    expect(runs.flat().every((entry) => entry.hour < 24)).toBe(true);
+  it("makes no claim without an envelope, so no tick can be drawn either", () => {
+    expect(deviationBounds({ ...hour(5), liveLow: null, liveHigh: null })).toBeNull();
   });
 });

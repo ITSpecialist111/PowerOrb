@@ -16,6 +16,7 @@ import {
   PROVISIONAL_DAYS,
   bandRuns,
   describeDeviation,
+  deviationBounds,
   fetchBaseline,
   fetchToday,
   fractionalHour,
@@ -88,6 +89,23 @@ function polar(hour: number, radius: number): [number, number] {
 
 function point(coords: [number, number]): string {
   return `${coords[0].toFixed(2)},${coords[1].toFixed(2)}`;
+}
+
+/** An annular wedge between two hours, used to shade the hours not yet lived. */
+function sector(from: number, to: number, inner: number, outer: number): string {
+  if (to - from < 0.01) return "";
+  const large = to - from > 12 ? 1 : 0;
+  const a = polar(from, outer);
+  const b = polar(to, outer);
+  const c = polar(to, inner);
+  const d = polar(from, inner);
+  return [
+    `M ${point(a)}`,
+    `A ${outer} ${outer} 0 ${large} 1 ${point(b)}`,
+    `L ${point(c)}`,
+    `A ${inner} ${inner} 0 ${large} 0 ${point(d)}`,
+    "Z",
+  ].join(" ");
 }
 
 @customElement("power-orb")
@@ -428,8 +446,19 @@ export class PowerOrbCard extends LitElement {
    * Runs of consecutive hours that carry a baseline. The dial wraps across
    * midnight; the cartesian strip cannot.
    */
-  private bandRuns(wrap: boolean, source: "typical" | "live" = "typical"): BandPoint[][] {
-    return bandRuns(this.baseline?.hours ?? [], wrap, source);
+  private bandRuns(wrap: boolean): BandPoint[][] {
+    return bandRuns(this.baseline?.hours ?? [], wrap);
+  }
+
+  /** Which side of the usual range an hour fell, if either. */
+  private departure(hour: number, watts: number): "above" | "below" | null {
+    const band = this.baseline?.hours[hour];
+    if (!band) return null;
+    const bounds = deviationBounds(band);
+    if (!bounds) return null;
+    if (watts > bounds.high) return "above";
+    if (watts < bounds.low) return "below";
+    return null;
   }
 
   /** True while the live reading is adjacent to the last completed hour. */
@@ -457,23 +486,17 @@ export class PowerOrbCard extends LitElement {
   }
 
   private renderBand(max: number) {
-    const build = (source: "typical" | "live") =>
-      this.bandRuns(true, source).map((run) => {
-        const outer = run.map((entry) => {
-          const inner = this.radius(entry.low, max);
-          const outerRadius = Math.max(this.radius(entry.high, max), inner + MIN_BAND);
-          return point(polar(entry.hour + 0.5, outerRadius));
-        });
-        const inner = [...run]
-          .reverse()
-          .map((entry) => point(polar(entry.hour + 0.5, this.radius(entry.low, max))));
-        return svg`<polygon class=${`band band-${source}`}
-          points=${[...outer, ...inner].join(" ")} />`;
+    return this.bandRuns(true).map((run) => {
+      const outer = run.map((entry) => {
+        const inner = this.radius(entry.low, max);
+        const outerRadius = Math.max(this.radius(entry.high, max), inner + MIN_BAND);
+        return point(polar(entry.hour + 0.5, outerRadius));
       });
-    // The envelope is drawn as an outline over the typical band. Either can be
-    // the wider of the two, since they come from different windows, so a fill
-    // would let one hide the other.
-    return [...build("typical"), ...build("live")];
+      const inner = [...run]
+        .reverse()
+        .map((entry) => point(polar(entry.hour + 0.5, this.radius(entry.low, max))));
+      return svg`<polygon class="band" points=${[...outer, ...inner].join(" ")} />`;
+    });
   }
 
   /**
@@ -507,12 +530,12 @@ export class PowerOrbCard extends LitElement {
    * the picture and the sentence cannot disagree.
    */
   private tick(hour: number, watts: number, band: BaselineHour, max: number) {
-    const high = band.liveHigh ?? band.high;
-    const low = band.liveLow ?? band.low;
-    const above = watts > high;
-    if (!above && watts >= low) return nothing;
+    const bounds = deviationBounds(band);
+    if (!bounds) return nothing;
+    const above = watts > bounds.high;
+    if (!above && watts >= bounds.low) return nothing;
 
-    const edge = this.radius(above ? high : low, max);
+    const edge = this.radius(above ? bounds.high : bounds.low, max);
     const tip = this.radius(watts, max);
     // A short excursion would otherwise land inside a single dash gap.
     const reach =
@@ -527,29 +550,59 @@ export class PowerOrbCard extends LitElement {
     />`;
   }
 
-  private tracePoints(max: number, live: number | null): string[] {
-    const runs = this.traceRuns().map((run) =>
-      run
-        .map((entry) => point(polar(entry.hour + 0.5, this.radius(entry.watts, max))))
-        .join(" "),
-    );
-    if (live !== null) {
-      const now = fractionalHour(this.now, this.timeZone);
-      const bead = point(polar(now, this.radius(live, max)));
-      const tail = runs[runs.length - 1];
-      if (tail && this.beadJoinsTrace(now)) {
-        runs[runs.length - 1] = `${tail} ${bead}`;
+  /**
+   * Today's line, split into segments coloured by how that hour compared with
+   * the usual range. Colouring the line itself means the card has something to
+   * say every day, not only on the days something went wrong.
+   */
+  private traceSegments(
+    max: number,
+    live: number | null,
+  ): { points: string; state: string }[] {
+    const nodes: { hour: number; watts: number; state: string }[] = [];
+    for (const run of this.traceRuns()) {
+      if (nodes.length > 0) nodes.push({ hour: -1, watts: 0, state: "break" });
+      for (const entry of run) {
+        nodes.push({
+          hour: entry.hour + 0.5,
+          watts: entry.watts,
+          state: this.departure(entry.hour, entry.watts) ?? "normal",
+        });
       }
     }
-    return runs.filter((run) => run.includes(" "));
+
+    const now = fractionalHour(this.now, this.timeZone);
+    if (live !== null && this.beadJoinsTrace(now)) {
+      nodes.push({
+        hour: now,
+        watts: live,
+        state: this.departure(Math.floor(now), live) ?? "normal",
+      });
+    }
+
+    const segments: { points: string; state: string }[] = [];
+    for (let index = 1; index < nodes.length; index += 1) {
+      const from = nodes[index - 1];
+      const to = nodes[index];
+      if (!from || !to || from.state === "break" || to.state === "break") continue;
+      segments.push({
+        // The later of the two ends decides the colour, so a segment entering a
+        // departure is already marked when it arrives.
+        state: to.state === "normal" ? from.state : to.state,
+        points: `${point(polar(from.hour, this.radius(from.watts, max)))} ${point(
+          polar(to.hour, this.radius(to.watts, max)),
+        )}`,
+      });
+    }
+    return segments;
   }
 
   private renderDial(live: number | null) {
     const max = this.scaleMax();
-    const traces = this.tracePoints(max, live);
     const now = fractionalHour(this.now, this.timeZone);
     const bead = live === null ? null : polar(now, this.radius(live, max));
     const scale = this.formatPower(max);
+    const quarter = this.formatPower(max / 4);
 
     return svg`
       <svg class="dial" viewBox="0 0 ${VIEW} ${VIEW}" role="img"
@@ -568,15 +621,23 @@ export class PowerOrbCard extends LitElement {
           `;
         })}
         ${this.renderBand(max)} ${this.renderTicks(max, live)}
-        ${traces.map((points) => svg`<polyline class="trace" points=${points} />`)}
+        ${this.traceSegments(max, live).map(
+          (segment) =>
+            svg`<polyline class=${`trace ${segment.state}`} points=${segment.points} />`,
+        )}
         ${bead
           ? svg`
               <circle class="bead-halo" cx=${bead[0]} cy=${bead[1]} r="11" />
               <circle class="bead" cx=${bead[0]} cy=${bead[1]} r="6" />
             `
           : nothing}
-        <text class="scale" x="2" y="14" text-anchor="start">
+        <path class="future" d=${sector(now, 24, RADIUS_IN, RADIUS_OUT)} />
+        <text class="scale" x=${polar(21, RADIUS_OUT)[0]} y=${polar(21, RADIUS_OUT)[1]}>
           ${scale.value} ${scale.unit}
+        </text>
+        <text class="scale" x=${polar(21, this.radius(max / 4, max))[0]}
+          y=${polar(21, this.radius(max / 4, max))[1]}>
+          ${quarter.value} ${quarter.unit}
         </text>
       </svg>
     `;
@@ -594,31 +655,28 @@ export class PowerOrbCard extends LitElement {
     const scale = this.formatPower(max);
     const hours = this.baseline?.hours;
 
-    const runs = ["typical" as const, "live" as const].flatMap((source) =>
-      this.bandRuns(false, source).map((run) => {
-        const top = run.map((entry) => {
-          const low = y(entry.low);
-          return `${x(entry.hour + 0.5)},${Math.min(y(entry.high), low - MIN_BAND)}`;
-        });
-        const bottom = [...run]
-          .reverse()
-          .map((entry) => `${x(entry.hour + 0.5)},${y(entry.low)}`);
-        return svg`<polygon class=${`band band-${source}`}
-          points=${[...top, ...bottom].join(" ")} />`;
-      }),
-    );
+    const runs = this.bandRuns(false).map((run) => {
+      const top = run.map((entry) => {
+        const low = y(entry.low);
+        return `${x(entry.hour + 0.5)},${Math.min(y(entry.high), low - MIN_BAND)}`;
+      });
+      const bottom = [...run]
+        .reverse()
+        .map((entry) => `${x(entry.hour + 0.5)},${y(entry.low)}`);
+      return svg`<polygon class="band" points=${[...top, ...bottom].join(" ")} />`;
+    });
 
     const ticks = hours
       ? this.today.map((entry) => {
           const band = hours[entry.hour];
           if (!band) return nothing;
-          const high = band.liveHigh ?? band.high;
-          const low = band.liveLow ?? band.low;
-          const above = entry.watts > high;
-          if (!above && entry.watts >= low) return nothing;
+          const bounds = deviationBounds(band);
+          if (!bounds) return nothing;
+          const above = entry.watts > bounds.high;
+          if (!above && entry.watts >= bounds.low) return nothing;
           return svg`<line
             class=${`tick ${above ? "above" : "below"}`}
-            x1=${x(entry.hour + 0.5)} y1=${y(above ? high : low)}
+            x1=${x(entry.hour + 0.5)} y1=${y(above ? bounds.high : bounds.low)}
             x2=${x(entry.hour + 0.5)} y2=${y(entry.watts)}
           />`;
         })
@@ -725,7 +783,7 @@ export class PowerOrbCard extends LitElement {
           <header>
             <div>
               <small>Today against normal</small>
-              <span>${this.config.name ?? "Power Orb"}</span>
+              <span>${this.config.name ?? "Home load"}</span>
             </div>
             <span class="status" title="Live data">
               <i class=${live === null ? "offline" : ""}></i> live
@@ -752,7 +810,8 @@ export class PowerOrbCard extends LitElement {
           <div class="legend" aria-hidden="true">
             <span class="key band"></span>usual range
             <span class="key line"></span>today
-            <span class="key dot"></span>now
+            <span class="key line above"></span>above
+            <span class="key line below"></span>below
           </div>
 
           <div class="chips">
@@ -882,28 +941,29 @@ export class PowerOrbCard extends LitElement {
     .scale {
       fill: #8b90a6;
       font-size: 13px;
-      text-anchor: middle;
       letter-spacing: 0.08em;
     }
     .hour {
+      text-anchor: middle;
       dominant-baseline: middle;
     }
     .scale {
-      font-size: 12px;
+      fill: #6f7488;
+      font-size: 11px;
+      text-anchor: middle;
+      dominant-baseline: middle;
     }
     .band {
-      fill: rgba(160, 178, 210, 0.11);
-      stroke: rgba(196, 212, 238, 0.3);
-      stroke-width: 1;
-      stroke-linejoin: round;
+      fill: rgba(160, 178, 210, 0.13);
+      stroke: none;
     }
-    .band-live {
-      fill: none;
-      stroke: rgba(196, 212, 238, 0.3);
-      stroke-dasharray: 4 4;
+    .future {
+      fill: rgba(6, 7, 12, 0.55);
+      stroke: none;
+      pointer-events: none;
     }
     .rim.mid {
-      stroke-dasharray: 2 6;
+      stroke: rgba(255, 255, 255, 0.07);
     }
     .tick {
       stroke-width: 4;
@@ -919,9 +979,19 @@ export class PowerOrbCard extends LitElement {
     .trace {
       fill: none;
       stroke: var(--orb-home);
-      stroke-width: 2.5;
+      stroke-width: 3;
       stroke-linejoin: round;
       stroke-linecap: round;
+      filter: drop-shadow(0 0 4px currentColor);
+      color: var(--orb-home);
+    }
+    .trace.above {
+      stroke: var(--orb-above);
+      color: var(--orb-above);
+    }
+    .trace.below {
+      stroke: var(--orb-below);
+      color: var(--orb-below);
     }
     .bead {
       fill: var(--orb-home);
@@ -981,6 +1051,7 @@ export class PowerOrbCard extends LitElement {
     .verdict.below {
       color: var(--orb-below);
     }
+    .verdict.normal,
     .verdict.unknown {
       color: #9aa0b4;
     }
@@ -1011,6 +1082,12 @@ export class PowerOrbCard extends LitElement {
     .key.line {
       height: 2px;
       background: var(--orb-home);
+    }
+    .key.line.above {
+      background: var(--orb-above);
+    }
+    .key.line.below {
+      background: var(--orb-below);
     }
     .key.dot {
       width: 8px;

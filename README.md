@@ -65,21 +65,27 @@ for every configured power sensor.
 | Baseline median below 50 W | Sentence suppressed; a percentage of nearly nothing is meaningless |
 | `recorder` keeping fewer than about 2 days of five-minute statistics | Band drawn, verdict suppressed, with a note asking you to raise `purge_keep_days` |
 
-The comparison is deliberately conservative. The test uses the spread seen
+The comparison is deliberately conservative. The band is the spread seen
 *within* past hours rather than the spread of hourly averages, with a further
-10% margin on top, so ordinary appliance cycling is unlikely to read as
-abnormal. It is not immune: the envelope is built from five-minute means, which
-still smooth a short burst, so a kettle or an induction hob can occasionally tip
-the verdict. The reported figure is measured against the boundary that was
-actually crossed, not the median — crossing a 1.6 kW upper bound at 1.74 kW is
-reported as 10% above, not as a multiple of a much lower median.
+10% margin before a departure is called, so ordinary appliance cycling is
+unlikely to read as abnormal. It is not immune: the band is built from
+five-minute means, which still smooth a short burst, so a kettle or an
+induction hob can occasionally tip the verdict. The reported figure is measured
+against the boundary that was actually crossed, not the median — crossing a
+1.6 kW upper bound at 1.74 kW is reported as 10% above, not as a multiple of a
+much lower median.
 
-The dial shows both ranges: a solid band for the typical hourly range, and a
-fainter dashed band for the wider envelope the verdict actually tests against.
-A bead outside the solid band but inside the dashed one is genuinely normal.
-Where today's line leaves the envelope, a coloured tick marks how far — including
-for the hour in progress, so whatever the sentence names is always visible on
-the dial.
+**One band, one comparator.** The range that is drawn is exactly the range the
+verdict is judged against, so the picture and the sentence cannot disagree.
+Today's line is coloured by how each hour compared: teal inside the band, warm
+above it, cool below. Where it leaves the band a tick also marks how far —
+including for the hour in progress, so whatever the sentence names is always
+visible on the dial. Hours not yet lived are shaded, so the dial visibly fills
+through the day.
+
+If recorder has no five-minute detail left, the band falls back to the range of
+hourly means and the verdict is suppressed rather than computed from a
+distribution that cannot describe an instant.
 
 ## Installation
 
