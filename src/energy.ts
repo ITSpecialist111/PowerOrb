@@ -104,6 +104,101 @@ export function discoverEnergyFlows(
     .filter((flow) => flow.channels.length > 0);
 }
 
+const FLOW_ROLES: Record<
+  EnergyFlowKind,
+  { positive: PowerChannelRole; negative: PowerChannelRole }
+> = {
+  solar: { positive: "solar", negative: "solar" },
+  grid: { positive: "grid_import", negative: "grid_export" },
+  battery: { positive: "battery_discharge", negative: "battery_charge" },
+};
+
+function entityList(value: unknown, kind: string, key: string): string[] {
+  const list = typeof value === "string" ? [value] : value;
+  if (
+    !Array.isArray(list) ||
+    list.length === 0 ||
+    list.some((entityId) => typeof entityId !== "string" || !entityId)
+  ) {
+    throw new Error(`${kind}.${key} must contain one or more entity IDs`);
+  }
+  return list as string[];
+}
+
+function configuredChannels(
+  kind: EnergyFlowKind,
+  configured: unknown,
+): PowerChannel[] {
+  if (typeof configured === "string" || Array.isArray(configured)) {
+    return entityList(configured, kind, "entity").map((entityId) => ({
+      entityId,
+      multiplier: 1,
+      role: kind,
+    }));
+  }
+
+  if (!isRecord(configured)) {
+    throw new Error(`${kind} must contain one or more entity IDs`);
+  }
+
+  const allowed = ["entity", "inverted", "from", "to"];
+  const unsupported = Object.keys(configured).filter(
+    (key) => !allowed.includes(key),
+  );
+  if (unsupported.length > 0) {
+    throw new Error(`${kind} does not support ${unsupported.join(", ")}`);
+  }
+
+  const directional = "from" in configured || "to" in configured;
+  const modes =
+    Number("entity" in configured) + Number("inverted" in configured) + Number(directional);
+  if (modes > 1) {
+    throw new Error(
+      `${kind} must use only one of entity, inverted, or from and to`,
+    );
+  }
+
+  if ("entity" in configured) {
+    return entityList(configured.entity, kind, "entity").map((entityId) => ({
+      entityId,
+      multiplier: 1,
+      role: kind,
+    }));
+  }
+
+  if ("inverted" in configured) {
+    return entityList(configured.inverted, kind, "inverted").map((entityId) => ({
+      entityId,
+      multiplier: -1,
+      role: kind,
+    }));
+  }
+
+  if (directional) {
+    if (kind === "solar") {
+      throw new Error("solar does not support from and to; use a single entity");
+    }
+    if (!("from" in configured) || !("to" in configured)) {
+      throw new Error(`${kind} requires both from and to`);
+    }
+    const roles = FLOW_ROLES[kind];
+    return [
+      ...entityList(configured.from, kind, "from").map((entityId) => ({
+        entityId,
+        multiplier: 1,
+        role: roles.positive,
+      })),
+      ...entityList(configured.to, kind, "to").map((entityId) => ({
+        entityId,
+        multiplier: -1,
+        role: roles.negative,
+      })),
+    ];
+  }
+
+  throw new Error(`${kind} must define entity, inverted, or from and to`);
+}
+
 export function configuredEnergyFlows(mapping: unknown): EnergyFlow[] {
   if (!isRecord(mapping)) {
     throw new Error("entities must map solar, grid, or battery to entity IDs");
@@ -119,28 +214,17 @@ export function configuredEnergyFlows(mapping: unknown): EnergyFlow[] {
   for (const kind of kinds) {
     const configured = mapping[kind];
     if (configured === undefined) continue;
-    const entityIds = typeof configured === "string" ? [configured] : configured;
-    if (
-      !Array.isArray(entityIds) ||
-      entityIds.length === 0 ||
-      entityIds.some((entityId) => typeof entityId !== "string" || !entityId)
-    ) {
-      throw new Error(`${kind} must contain one or more entity IDs`);
-    }
-    for (const entityId of entityIds) {
-      if (assigned.has(entityId)) {
-        throw new Error(`${entityId} cannot be assigned to more than one role`);
+
+    const channels = configuredChannels(kind, configured);
+    for (const channel of channels) {
+      if (assigned.has(channel.entityId)) {
+        throw new Error(
+          `${channel.entityId} cannot be assigned to more than one role`,
+        );
       }
-      assigned.add(entityId);
+      assigned.add(channel.entityId);
     }
-    flows.push({
-      kind,
-      channels: entityIds.map((entityId) => ({
-        entityId,
-        multiplier: 1,
-        role: kind,
-      })),
-    });
+    flows.push({ kind, channels });
   }
 
   if (flows.length === 0) {

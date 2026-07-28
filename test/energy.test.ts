@@ -168,6 +168,59 @@ describe("configuredEnergyFlows", () => {
       }),
     ).toThrow("sensor.shared cannot be assigned to more than one role");
   });
+
+  it("maps a directional from/to pair to signed channels", () => {
+    expect(
+      configuredEnergyFlows({
+        grid: {
+          from: "sensor.grid_consumption",
+          to: "sensor.feed_in",
+        },
+      }),
+    ).toEqual([
+      {
+        kind: "grid",
+        channels: [
+          {
+            entityId: "sensor.grid_consumption",
+            multiplier: 1,
+            role: "grid_import",
+          },
+          { entityId: "sensor.feed_in", multiplier: -1, role: "grid_export" },
+        ],
+      },
+    ]);
+  });
+
+  it("inverts a signed sensor with the wrong polarity", () => {
+    expect(
+      configuredEnergyFlows({ grid: { inverted: "sensor.grid_ct" } }),
+    ).toEqual([
+      {
+        kind: "grid",
+        channels: [
+          { entityId: "sensor.grid_ct", multiplier: -1, role: "grid" },
+        ],
+      },
+    ]);
+  });
+
+  it("rejects conflicting, incomplete, and unsupported flow options", () => {
+    expect(() =>
+      configuredEnergyFlows({
+        grid: { entity: "sensor.a", inverted: "sensor.b" },
+      }),
+    ).toThrow("grid must use only one of entity, inverted, or from and to");
+    expect(() =>
+      configuredEnergyFlows({ grid: { from: "sensor.a" } }),
+    ).toThrow("grid requires both from and to");
+    expect(() =>
+      configuredEnergyFlows({ solar: { from: "sensor.a", to: "sensor.b" } }),
+    ).toThrow("solar does not support from and to; use a single entity");
+    expect(() =>
+      configuredEnergyFlows({ grid: { max_power: 10_000 } }),
+    ).toThrow("grid does not support max_power");
+  });
 });
 
 describe("power calculations", () => {

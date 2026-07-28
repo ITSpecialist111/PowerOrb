@@ -86,9 +86,35 @@ entities:
   battery: sensor.battery_power
 ```
 
-Explicit grid and battery entities should be signed: positive values mean grid
-import or battery supply, while negative values mean grid export or battery
-charging. `entity` and `entities` cannot be used together.
+A signed sensor is expected: positive values mean grid import or battery supply,
+negative values mean grid export or battery charging. When a sensor uses the
+opposite polarity, or when the meter is split into two positive-only sensors,
+use the long form instead. It mirrors the three power-sensor modes of the Energy
+dashboard:
+
+```yaml
+type: custom:power-orb
+entities:
+  solar: sensor.pv_power
+  grid:
+    from: sensor.grid_consumption
+    to: sensor.feed_in
+  battery:
+    inverted: sensor.battery_power
+max_power: 10000
+```
+
+| Flow option | Meaning |
+| --- | --- |
+| `entity` | Signed sensor; positive is import or discharge |
+| `inverted` | Signed sensor with the opposite polarity |
+| `from` / `to` | Two positive-only sensors; the flow becomes `from - to` |
+
+Each role accepts exactly one of those three forms, and every option takes one
+entity ID or a list. `from` and `to` must be used together, and are not
+available for `solar`. `entity` and `entities` cannot be used together.
+Remember that `max_power`, `unit`, and `name` are top-level options, not
+entries under `entities`.
 
 For automatic discovery, configure real-time power sensors in
 **Settings ÔåÆ Dashboards ÔåÆ Energy**. Cumulative kWh meters are intentionally not
