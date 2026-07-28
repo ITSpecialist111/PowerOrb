@@ -291,13 +291,17 @@ function hourLabel(hour: number): string {
   return `${pad(hour)}:00\u2013${pad((hour + 1) % 24)}:00`;
 }
 
+/** Margin above the envelope before a reading counts as a departure. */
+export const DEVIATION_MARGIN = 1.1;
+
 /**
  * Compare the live figure with the band for the hour it falls in.
  *
- * The in-band test uses the within-hour envelope so a kettle switching on does
- * not read as abnormal. The reported ratio is against the median, rounded to
- * 5% and capped, because a quartile drawn from ~28 samples cannot justify
- * finer precision.
+ * The test uses the within-hour envelope, so ordinary appliance cycling does
+ * not read as abnormal, and the reported figure is measured against the
+ * boundary that was actually crossed rather than the median. Quoting a
+ * multiple of the median would overstate: crossing a p90 of 1.6 kW at 1.74 kW
+ * is a 9% departure, not the 3.5x that the median implies.
  */
 export function describeDeviation(
   watts: number,
@@ -309,27 +313,39 @@ export function describeDeviation(
   if (band.liveLow === null || band.liveHigh === null) return null;
 
   const label = hourLabel(band.hour);
-  if (watts >= band.liveLow && watts <= band.liveHigh) {
+  const high = band.liveHigh * DEVIATION_MARGIN;
+  const low = band.liveLow / DEVIATION_MARGIN;
+  if (watts >= low && watts <= high) {
     return { ratio: 1, direction: "normal", sentence: `Normal for ${label}` };
   }
 
-  const ratio = watts / band.median;
-  const direction = watts > band.liveHigh ? "above" : "below";
-  if (ratio >= 2) {
-    return { ratio, direction, sentence: `More than 2\u00d7 normal for ${label}` };
+  const above = watts > high;
+  const direction = above ? "above" : "below";
+  const boundary = Math.max(above ? band.liveHigh : band.liveLow, 1);
+  const ratio = watts / boundary;
+
+  if (above && ratio >= 2) {
+    return {
+      ratio,
+      direction,
+      sentence: `More than 2\u00d7 the usual range for ${label}`,
+    };
   }
-  if (ratio <= 0.5) {
-    return { ratio, direction, sentence: `Less than half normal for ${label}` };
+  if (!above && ratio <= 0.5) {
+    return {
+      ratio,
+      direction,
+      sentence: `Less than half the usual range for ${label}`,
+    };
   }
 
+  // The margin guarantees at least a ten percent departure, so there is no
+  // rounding case that could report zero and contradict the drawn tick.
   const percent = Math.round(Math.abs(ratio - 1) * 20) * 5;
-  if (percent === 0) {
-    return { ratio, direction, sentence: `Just ${direction} normal for ${label}` };
-  }
   return {
     ratio,
     direction,
-    sentence: `${percent}% ${direction} normal for ${label}`,
+    sentence: `${percent}% ${direction} the usual range for ${label}`,
   };
 }
 

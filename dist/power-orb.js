@@ -29,11 +29,11 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 	let t = "";
 	for (let n of e.cssRules) t += n.cssText;
 	return a(t);
-})(e) : e, { is: l, defineProperty: u, getOwnPropertyDescriptor: d, getOwnPropertyNames: f, getOwnPropertySymbols: p, getPrototypeOf: m } = Object, h = globalThis, ee = h.trustedTypes, te = ee ? ee.emptyScript : "", ne = h.reactiveElementPolyfillSupport, g = (e, t) => e, _ = {
+})(e) : e, { is: l, defineProperty: u, getOwnPropertyDescriptor: d, getOwnPropertyNames: f, getOwnPropertySymbols: ee, getPrototypeOf: p } = Object, m = globalThis, te = m.trustedTypes, ne = te ? te.emptyScript : "", re = m.reactiveElementPolyfillSupport, h = (e, t) => e, g = {
 	toAttribute(e, t) {
 		switch (t) {
 			case Boolean:
-				e = e ? te : null;
+				e = e ? ne : null;
 				break;
 			case Object:
 			case Array: e = e == null ? e : JSON.stringify(e);
@@ -58,15 +58,15 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 		}
 		return n;
 	}
-}, re = (e, t) => !l(e, t), ie = {
+}, _ = (e, t) => !l(e, t), ie = {
 	attribute: !0,
 	type: String,
-	converter: _,
+	converter: g,
 	reflect: !1,
 	useDefault: !1,
-	hasChanged: re
+	hasChanged: _
 };
-Symbol.metadata ??= Symbol("metadata"), h.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
+Symbol.metadata ??= Symbol("metadata"), m.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
 var v = class extends HTMLElement {
 	static addInitializer(e) {
 		this._$Ei(), (this.l ??= []).push(e);
@@ -103,14 +103,14 @@ var v = class extends HTMLElement {
 		return this.elementProperties.get(e) ?? ie;
 	}
 	static _$Ei() {
-		if (this.hasOwnProperty(g("elementProperties"))) return;
-		let e = m(this);
+		if (this.hasOwnProperty(h("elementProperties"))) return;
+		let e = p(this);
 		e.finalize(), e.l !== void 0 && (this.l = [...e.l]), this.elementProperties = new Map(e.elementProperties);
 	}
 	static finalize() {
-		if (this.hasOwnProperty(g("finalized"))) return;
-		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(g("properties"))) {
-			let e = this.properties, t = [...f(e), ...p(e)];
+		if (this.hasOwnProperty(h("finalized"))) return;
+		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(h("properties"))) {
+			let e = this.properties, t = [...f(e), ...ee(e)];
 			for (let n of t) this.createProperty(n, e[n]);
 		}
 		let e = this[Symbol.metadata];
@@ -171,14 +171,14 @@ var v = class extends HTMLElement {
 	_$ET(e, t) {
 		let n = this.constructor.elementProperties.get(e), r = this.constructor._$Eu(e, n);
 		if (r !== void 0 && !0 === n.reflect) {
-			let i = (n.converter?.toAttribute === void 0 ? _ : n.converter).toAttribute(t, n.type);
+			let i = (n.converter?.toAttribute === void 0 ? g : n.converter).toAttribute(t, n.type);
 			this._$Em = e, i == null ? this.removeAttribute(r) : this.setAttribute(r, i), this._$Em = null;
 		}
 	}
 	_$AK(e, t) {
 		let n = this.constructor, r = n._$Eh.get(e);
 		if (r !== void 0 && this._$Em !== r) {
-			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? _ : e.converter;
+			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? g : e.converter;
 			this._$Em = r;
 			let a = i.fromAttribute(t, e.type);
 			this[r] = a ?? this._$Ej?.get(r) ?? a, this._$Em = null;
@@ -187,7 +187,7 @@ var v = class extends HTMLElement {
 	requestUpdate(e, t, n, r = !1, i) {
 		if (e !== void 0) {
 			let a = this.constructor;
-			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? re)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
+			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? _)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
 			this.C(e, t, n);
 		}
 		!1 === this.isUpdatePending && (this._$ES = this._$EP());
@@ -251,7 +251,7 @@ var v = class extends HTMLElement {
 	updated(e) {}
 	firstUpdated(e) {}
 };
-v.elementStyles = [], v.shadowRootOptions = { mode: "open" }, v[g("elementProperties")] = /* @__PURE__ */ new Map(), v[g("finalized")] = /* @__PURE__ */ new Map(), ne?.({ ReactiveElement: v }), (h.reactiveElementVersions ??= []).push("2.1.2");
+v.elementStyles = [], v.shadowRootOptions = { mode: "open" }, v[h("elementProperties")] = /* @__PURE__ */ new Map(), v[h("finalized")] = /* @__PURE__ */ new Map(), re?.({ ReactiveElement: v }), (m.reactiveElementVersions ??= []).push("2.1.2");
 //#endregion
 //#region node_modules/lit-html/lit-html.js
 var y = globalThis, ae = (e) => e, b = y.trustedTypes, oe = b ? b.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, se = "$lit$", x = `lit$${Math.random().toFixed(9).slice(2)}$`, ce = "?" + x, le = `<${ce}>`, S = document, C = () => S.createComment(""), w = (e) => e === null || typeof e != "object" && typeof e != "function", ue = Array.isArray, de = (e) => ue(e) || typeof e?.[Symbol.iterator] == "function", fe = "[ 	\n\f\r]", T = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, pe = /-->/g, me = />/g, E = RegExp(`>|${fe}(?:([^\\s"'>=/]+)(${fe}*=${fe}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), he = /'/g, ge = /"/g, _e = /^(?:script|style|textarea|title)$/i, ve = (e) => (t, ...n) => ({
@@ -515,9 +515,9 @@ var Ae = (e) => (t, n) => {
 }, je = {
 	attribute: !0,
 	type: String,
-	converter: _,
+	converter: g,
 	reflect: !1,
-	hasChanged: re
+	hasChanged: _
 }, Me = (e = je, t, n) => {
 	let { kind: r, metadata: i } = n, a = globalThis.litPropertyMetadata.get(i);
 	if (a === void 0 && globalThis.litPropertyMetadata.set(i, a = /* @__PURE__ */ new Map()), r === "setter" && ((e = Object.create(e)).wrapped = !0), a.set(n.name, e), r === "accessor") {
@@ -846,7 +846,7 @@ async function tt(e, t, n, r) {
 		let i = Ze(t, n);
 		i !== null && d[Je(e, r)]?.push(i);
 	}
-	let p = u.map((e, t) => {
+	let ee = u.map((e, t) => {
 		if (e.length < 10) return null;
 		let n = [...e].sort((e, t) => e - t), r = d[t] ?? [], i = r.length >= 20 ? [...r].sort((e, t) => e - t) : null;
 		return {
@@ -858,11 +858,11 @@ async function tt(e, t, n, r) {
 			liveHigh: i ? K(i, .9) : null,
 			samples: n.length
 		};
-	}), m = f.size, h = "ok";
-	return p.every((e) => e === null) || m < 7 ? h = "learning" : m < 14 && (h = "provisional"), {
-		hours: p,
-		days: m,
-		status: h
+	}), p = f.size, m = "ok";
+	return ee.every((e) => e === null) || p < 7 ? m = "learning" : p < 14 && (m = "provisional"), {
+		hours: ee,
+		days: p,
+		status: m
 	};
 }
 async function nt(e, t, n, r) {
@@ -883,42 +883,36 @@ function rt(e) {
 	let t = (e) => String(e).padStart(2, "0");
 	return `${t(e)}:00\u2013${t((e + 1) % 24)}:00`;
 }
-function it(e, t) {
+var it = 1.1;
+function at(e, t) {
 	if (!t || t.median < 50 || t.liveLow === null || t.liveHigh === null) return null;
-	let n = rt(t.hour);
-	if (e >= t.liveLow && e <= t.liveHigh) return {
+	let n = rt(t.hour), r = t.liveHigh * it;
+	if (e >= t.liveLow / 1.1 && e <= r) return {
 		ratio: 1,
 		direction: "normal",
 		sentence: `Normal for ${n}`
 	};
-	let r = e / t.median, i = e > t.liveHigh ? "above" : "below";
-	if (r >= 2) return {
-		ratio: r,
-		direction: i,
-		sentence: `More than 2\u00d7 normal for ${n}`
-	};
-	if (r <= .5) return {
-		ratio: r,
-		direction: i,
-		sentence: `Less than half normal for ${n}`
-	};
-	let a = Math.round(Math.abs(r - 1) * 20) * 5;
-	return a === 0 ? {
-		ratio: r,
-		direction: i,
-		sentence: `Just ${i} normal for ${n}`
+	let i = e > r, a = i ? "above" : "below", o = e / Math.max(i ? t.liveHigh : t.liveLow, 1);
+	return i && o >= 2 ? {
+		ratio: o,
+		direction: a,
+		sentence: `More than 2\u00d7 the usual range for ${n}`
+	} : !i && o <= .5 ? {
+		ratio: o,
+		direction: a,
+		sentence: `Less than half the usual range for ${n}`
 	} : {
-		ratio: r,
-		direction: i,
-		sentence: `${a}% ${i} normal for ${n}`
+		ratio: o,
+		direction: a,
+		sentence: `${Math.round(Math.abs(o - 1) * 20) * 5}% ${a} the usual range for ${n}`
 	};
 }
-function at(e) {
+function ot(e) {
 	if (!Number.isFinite(e) || e <= 0) return 1e3;
 	let t = 10 ** Math.floor(Math.log10(e)), n = e / t;
 	return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * t;
 }
-function ot(e, t, n = "typical") {
+function st(e, t, n = "typical") {
 	let r = [], i = [];
 	for (let t of e) {
 		let e = n === "live" ? t?.liveLow : t?.low, a = n === "live" ? t?.liveHigh : t?.high;
@@ -957,8 +951,8 @@ function q(e, t, n, r) {
 }
 //#endregion
 //#region src/power-orb-card.ts
-var st = 300 * 1e3, ct = 300 * 1e3, J = 3600 * 1e3, lt = 30 * 1e3, ut = 300, dt = 400, Y = dt / 2, ft = 174, X = 80, pt = 5, mt = /* @__PURE__ */ new Map(), ht = /* @__PURE__ */ new Map(), gt = /* @__PURE__ */ new Map();
-function _t(e, t, n, r) {
+var ct = 300 * 1e3, lt = 300 * 1e3, J = 3600 * 1e3, ut = 30 * 1e3, dt = 300, ft = 400, Y = ft / 2, pt = 174, X = 62, mt = 5, ht = 9, gt = /* @__PURE__ */ new Map(), _t = /* @__PURE__ */ new Map(), vt = /* @__PURE__ */ new Map();
+function yt(e, t, n, r) {
 	let i = e.get(n);
 	if (i) return i;
 	let a = r();
@@ -1012,8 +1006,8 @@ var $ = class extends L {
 	connectedCallback() {
 		super.connectedCallback(), this.tickTimer = window.setInterval(() => {
 			this.now = Date.now();
-		}, lt), this.resizeObserver = new ResizeObserver((e) => {
-			let t = e[0]?.contentRect.width ?? 0, n = t > 0 && t < ut;
+		}, ut), this.resizeObserver = new ResizeObserver((e) => {
+			let t = e[0]?.contentRect.width ?? 0, n = t > 0 && t < dt;
 			n !== this.compact && (this.compact = n);
 		}), this.resizeObserver.observe(this), this._hass && this.connect();
 	}
@@ -1037,8 +1031,8 @@ var $ = class extends L {
 		}), this.connecting;
 	}
 	async startDiscovery(e) {
-		if (await this.loadEnergyPreferences(), !(e !== this.connectionGeneration || !this._hass) && (this.loadHistory(), this.historyTimer = window.setInterval(() => void this.loadHistory(!0), ct), !(this.config.entity || this.config.entities !== void 0))) {
-			this.refreshTimer = window.setInterval(() => void this.loadEnergyPreferences(), st);
+		if (await this.loadEnergyPreferences(), !(e !== this.connectionGeneration || !this._hass) && (this.loadHistory(), this.historyTimer = window.setInterval(() => void this.loadHistory(!0), lt), !(this.config.entity || this.config.entities !== void 0))) {
+			this.refreshTimer = window.setInterval(() => void this.loadEnergyPreferences(), ct);
 			try {
 				let t = await this._hass.connection.subscribeEvents(() => void this.loadEnergyPreferences(), "power_orb_refresh");
 				e === this.connectionGeneration ? this.unsubscribe = t : t();
@@ -1072,7 +1066,7 @@ var $ = class extends L {
 		this.historyAttempted = !0;
 		let n = Date.now(), r = `${[...new Set(this.channels.map((e) => e.entityId))].sort().join("|")}::`;
 		try {
-			let e = await _t(gt, r, `${r}${Math.floor(n / J)}`, () => et(t, this.channels));
+			let e = await yt(vt, r, `${r}${Math.floor(n / J)}`, () => et(t, this.channels));
 			if (e.length > 0) {
 				this.applyHistory({
 					baseline: null,
@@ -1081,14 +1075,14 @@ var $ = class extends L {
 				});
 				return;
 			}
-			let [i, a] = await Promise.all([_t(mt, r, `${r}${Math.floor(n / J)}`, () => tt(t, this.channels, n, this.timeZone)), _t(ht, r, `${r}${Math.floor(n / ct)}`, () => nt(t, this.channels, n, this.timeZone))]);
+			let [i, a] = await Promise.all([yt(gt, r, `${r}${Math.floor(n / J)}`, () => tt(t, this.channels, n, this.timeZone)), yt(_t, r, `${r}${Math.floor(n / lt)}`, () => nt(t, this.channels, n, this.timeZone))]);
 			this.applyHistory({
 				baseline: i,
 				today: a,
 				missing: []
 			}), this.historyRetried = !1;
 		} catch {
-			if (gt.delete(`${r}${Math.floor(n / J)}`), mt.delete(`${r}${Math.floor(n / J)}`), ht.delete(`${r}${Math.floor(n / ct)}`), !this.historyRetried) {
+			if (vt.delete(`${r}${Math.floor(n / J)}`), gt.delete(`${r}${Math.floor(n / J)}`), _t.delete(`${r}${Math.floor(n / lt)}`), !this.historyRetried) {
 				this.historyRetried = !0, this.retryTimer = window.setTimeout(() => void this.loadHistory(), 5e3);
 				return;
 			}
@@ -1127,14 +1121,14 @@ var $ = class extends L {
 		let e = this.config.max_power ?? 0;
 		for (let t of this.baseline?.hours ?? []) t && (e = Math.max(e, t.high, t.liveHigh ?? 0));
 		for (let t of this.today) e = Math.max(e, t.watts);
-		return at(Math.max(e, 1e3));
+		return ot(Math.max(e, 1e3));
 	}
 	radius(e, t) {
 		let n = Math.sqrt(Math.min(Math.max(e, 0), t) / t);
-		return X + (ft - X) * n;
+		return X + (pt - X) * n;
 	}
 	bandRuns(e, t = "typical") {
-		return ot(this.baseline?.hours ?? [], e, t);
+		return st(this.baseline?.hours ?? [], e, t);
 	}
 	beadJoinsTrace(e) {
 		let t = this.today[this.today.length - 1];
@@ -1153,7 +1147,7 @@ var $ = class extends L {
 	renderBand(e) {
 		let t = (t) => this.bandRuns(!0, t).map((n) => {
 			let r = n.map((t) => {
-				let n = this.radius(t.low, e), r = Math.max(this.radius(t.high, e), n + pt);
+				let n = this.radius(t.low, e), r = Math.max(this.radius(t.high, e), n + mt);
 				return Q(Z(t.hour + .5, r));
 			}), i = [...n].reverse().map((t) => Q(Z(t.hour + .5, this.radius(t.low, e))));
 			return O`<polygon class=${`band band-${t}`}
@@ -1161,19 +1155,23 @@ var $ = class extends L {
 		});
 		return [...t("typical"), ...t("live")];
 	}
-	renderTicks(e) {
-		let t = this.baseline?.hours;
-		return t ? this.today.map((n) => {
-			let r = t[n.hour];
-			if (!r) return A;
-			let i = n.watts > r.high, a = n.watts < r.low;
-			if (!i && !a) return A;
-			let o = Z(n.hour + .5, this.radius(i ? r.high : r.low, e)), s = Z(n.hour + .5, this.radius(n.watts, e));
-			return O`<line
-        class=${`tick ${i ? "above" : "below"}`}
-        x1=${o[0]} y1=${o[1]} x2=${s[0]} y2=${s[1]}
-      />`;
-		}) : A;
+	renderTicks(e, t) {
+		let n = this.baseline?.hours;
+		if (!n) return A;
+		let r = this.today.map((t) => {
+			let r = n[t.hour];
+			return r ? this.tick(t.hour + .5, t.watts, r, e) : A;
+		}), i = G(this.now, this.timeZone), a = n[Math.floor(i)];
+		return t !== null && a && r.push(this.tick(i, t, a, e)), r;
+	}
+	tick(e, t, n, r) {
+		let i = n.liveHigh ?? n.high, a = n.liveLow ?? n.low, o = t > i;
+		if (!o && t >= a) return A;
+		let s = this.radius(o ? i : a, r), c = this.radius(t, r), l = Math.abs(c - s) < ht ? s + (o ? ht : -9) : c, u = Z(e, s), d = Z(e, l);
+		return O`<line
+      class=${`tick ${o ? "above" : "below"}`}
+      x1=${u[0]} y1=${u[1]} x2=${d[0]} y2=${d[1]}
+    />`;
 	}
 	tracePoints(e, t) {
 		let n = this.traceRuns().map((t) => t.map((t) => Q(Z(t.hour + .5, this.radius(t.watts, e)))).join(" "));
@@ -1186,29 +1184,33 @@ var $ = class extends L {
 	renderDial(e) {
 		let t = this.scaleMax(), n = this.tracePoints(t, e), r = G(this.now, this.timeZone), i = e === null ? null : Z(r, this.radius(e, t)), a = this.formatPower(t);
 		return O`
-      <svg class="dial" viewBox="0 0 ${dt} ${dt}" role="img"
+      <svg class="dial" viewBox="0 0 ${ft} ${ft}" role="img"
         aria-label=${this.summary(e)}>
-        <circle class="rim" cx=${Y} cy=${Y} r=${ft} />
+        <circle class="rim" cx=${Y} cy=${Y} r=${pt} />
         <circle class="rim" cx=${Y} cy=${Y} r=${X} />
+        <circle class="rim mid" cx=${Y} cy=${Y}
+          r=${this.radius(t / 4, t)} />
         ${[
 			0,
 			6,
 			12,
 			18
 		].map((e) => {
-			let t = Z(e, X), n = Z(e, ft), r = Z(e, 189);
+			let t = Z(e, X), n = Z(e, pt), r = Z(e, 189);
 			return O`
             <line class="spoke" x1=${t[0]} y1=${t[1]} x2=${n[0]} y2=${n[1]} />
             <text class="hour" x=${r[0]} y=${r[1]}>${String(e).padStart(2, "0")}</text>
           `;
 		})}
-        ${this.renderBand(t)} ${this.renderTicks(t)}
+        ${this.renderBand(t)} ${this.renderTicks(t, e)}
         ${n.map((e) => O`<polyline class="trace" points=${e} />`)}
         ${i ? O`
               <circle class="bead-halo" cx=${i[0]} cy=${i[1]} r="11" />
               <circle class="bead" cx=${i[0]} cy=${i[1]} r="6" />
             ` : A}
-        <text class="scale" x=${Y} y="14">${a.value} ${a.unit}</text>
+        <text class="scale" x="2" y="14" text-anchor="start">
+          ${a.value} ${a.unit}
+        </text>
       </svg>
     `;
 	}
@@ -1216,17 +1218,17 @@ var $ = class extends L {
 		let t = this.scaleMax(), n = (e) => 148 - 130 * Math.sqrt(Math.min(Math.max(e, 0), t) / t), r = (e) => e / 24 * 400, i = this.formatPower(t), a = this.baseline?.hours, o = ["typical", "live"].flatMap((e) => this.bandRuns(!1, e).map((t) => {
 			let i = t.map((e) => {
 				let t = n(e.low);
-				return `${r(e.hour + .5)},${Math.min(n(e.high), t - pt)}`;
+				return `${r(e.hour + .5)},${Math.min(n(e.high), t - mt)}`;
 			}), a = [...t].reverse().map((e) => `${r(e.hour + .5)},${n(e.low)}`);
 			return O`<polygon class=${`band band-${e}`}
           points=${[...i, ...a].join(" ")} />`;
 		})), s = a ? this.today.map((e) => {
 			let t = a[e.hour];
 			if (!t) return A;
-			let i = e.watts > t.high, o = e.watts < t.low;
-			return !i && !o ? A : O`<line
-            class=${`tick ${i ? "above" : "below"}`}
-            x1=${r(e.hour + .5)} y1=${n(i ? t.high : t.low)}
+			let i = t.liveHigh ?? t.high, o = t.liveLow ?? t.low, s = e.watts > i;
+			return !s && e.watts >= o ? A : O`<line
+            class=${`tick ${s ? "above" : "below"}`}
+            x1=${r(e.hour + .5)} y1=${n(s ? i : o)}
             x2=${r(e.hour + .5)} y2=${n(e.watts)}
           />`;
 		}) : A, c = this.traceRuns().map((e) => e.map((e) => `${r(e.hour + .5)},${n(e.watts)}`).join(" ")), l = G(this.now, this.timeZone), u = c[c.length - 1];
@@ -1283,7 +1285,7 @@ var $ = class extends L {
 	deviation(e) {
 		if (e === null || !this.baseline) return null;
 		let t = Math.floor(G(this.now, this.timeZone));
-		return it(e, this.baseline.hours[t] ?? null);
+		return at(e, this.baseline.hours[t] ?? null);
 	}
 	summary(e) {
 		if (e === null) return "Home power unavailable";
@@ -1319,6 +1321,12 @@ var $ = class extends L {
           >
             ${n ? n.sentence : "Comparing with your normal day"}
           </p>
+
+          <div class="legend" aria-hidden="true">
+            <span class="key band"></span>usual range
+            <span class="key line"></span>today
+            <span class="key dot"></span>now
+          </div>
 
           <div class="chips">
             ${this.renderChip("solar")} ${this.renderChip("grid")}
@@ -1449,18 +1457,22 @@ var $ = class extends L {
       font-size: 12px;
     }
     .band {
-      fill: rgba(160, 178, 210, 0.24);
-      stroke: rgba(196, 212, 238, 0.55);
+      fill: rgba(160, 178, 210, 0.11);
+      stroke: rgba(196, 212, 238, 0.3);
       stroke-width: 1;
       stroke-linejoin: round;
     }
     .band-live {
       fill: none;
-      stroke: rgba(196, 212, 238, 0.34);
+      stroke: rgba(196, 212, 238, 0.3);
       stroke-dasharray: 4 4;
+    }
+    .rim.mid {
+      stroke-dasharray: 2 6;
     }
     .tick {
       stroke-width: 4;
+      stroke-linecap: round;
     }
     .tick.above {
       stroke: var(--orb-above);
@@ -1525,10 +1537,8 @@ var $ = class extends L {
       background: rgba(255, 255, 255, 0.05);
       box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
       font-size: 13px;
+      line-height: 1.3;
       text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
     .verdict.above {
       color: var(--orb-above);
@@ -1539,9 +1549,43 @@ var $ = class extends L {
     .verdict.unknown {
       color: #9aa0b4;
     }
+    .legend {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 4px 12px;
+      margin-top: 8px;
+      color: #767b90;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .key {
+      width: 14px;
+      height: 10px;
+      margin-right: 5px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .key.band {
+      background: rgba(160, 178, 210, 0.14);
+      box-shadow: inset 0 0 0 1px rgba(196, 212, 238, 0.4);
+      border-radius: 2px;
+    }
+    .key.line {
+      height: 2px;
+      background: var(--orb-home);
+    }
+    .key.dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--orb-home);
+    }
     .chips {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
       gap: 8px;
       margin-top: 8px;
     }
@@ -1590,6 +1634,7 @@ var $ = class extends L {
       font-size: 9px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
+      white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }

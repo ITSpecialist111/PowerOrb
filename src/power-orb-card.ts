@@ -25,6 +25,7 @@ import {
 import type {
   BandPoint,
   Baseline,
+  BaselineHour,
   EnergyFlow,
   EnergyFlowKind,
   EnergyPreferences,
@@ -43,8 +44,9 @@ const COMPACT_WIDTH = 300;
 const VIEW = 400;
 const CENTRE = VIEW / 2;
 const RADIUS_OUT = 174;
-const RADIUS_IN = 80;
+const RADIUS_IN = 62;
 const MIN_BAND = 5;
+const MIN_TICK = 9;
 
 /**
  * Shared across card instances so one dashboard issues one query.
@@ -479,22 +481,50 @@ export class PowerOrbCard extends LitElement {
    * so the ink scales with the size of the deviation and not with the radius
    * at which it happens to occur.
    */
-  private renderTicks(max: number) {
+  private renderTicks(max: number, live: number | null) {
     const hours = this.baseline?.hours;
     if (!hours) return nothing;
-    return this.today.map((entry) => {
+
+    const marks = this.today.map((entry) => {
       const band = hours[entry.hour];
       if (!band) return nothing;
-      const above = entry.watts > band.high;
-      const below = entry.watts < band.low;
-      if (!above && !below) return nothing;
-      const from = polar(entry.hour + 0.5, this.radius(above ? band.high : band.low, max));
-      const to = polar(entry.hour + 0.5, this.radius(entry.watts, max));
-      return svg`<line
-        class=${`tick ${above ? "above" : "below"}`}
-        x1=${from[0]} y1=${from[1]} x2=${to[0]} y2=${to[1]}
-      />`;
+      return this.tick(entry.hour + 0.5, entry.watts, band, max);
     });
+
+    // The hour in progress has no completed bucket, so the live reading has to
+    // supply its own tick. Without it the deviation named in the verdict has
+    // nothing on the dial to point at.
+    const nowHour = fractionalHour(this.now, this.timeZone);
+    const current = hours[Math.floor(nowHour)];
+    if (live !== null && current) {
+      marks.push(this.tick(nowHour, live, current, max));
+    }
+    return marks;
+  }
+
+  /**
+   * One deviation mark, using the same bounds the verdict is judged against so
+   * the picture and the sentence cannot disagree.
+   */
+  private tick(hour: number, watts: number, band: BaselineHour, max: number) {
+    const high = band.liveHigh ?? band.high;
+    const low = band.liveLow ?? band.low;
+    const above = watts > high;
+    if (!above && watts >= low) return nothing;
+
+    const edge = this.radius(above ? high : low, max);
+    const tip = this.radius(watts, max);
+    // A short excursion would otherwise land inside a single dash gap.
+    const reach =
+      Math.abs(tip - edge) < MIN_TICK
+        ? edge + (above ? MIN_TICK : -MIN_TICK)
+        : tip;
+    const from = polar(hour, edge);
+    const to = polar(hour, reach);
+    return svg`<line
+      class=${`tick ${above ? "above" : "below"}`}
+      x1=${from[0]} y1=${from[1]} x2=${to[0]} y2=${to[1]}
+    />`;
   }
 
   private tracePoints(max: number, live: number | null): string[] {
@@ -526,6 +556,8 @@ export class PowerOrbCard extends LitElement {
         aria-label=${this.summary(live)}>
         <circle class="rim" cx=${CENTRE} cy=${CENTRE} r=${RADIUS_OUT} />
         <circle class="rim" cx=${CENTRE} cy=${CENTRE} r=${RADIUS_IN} />
+        <circle class="rim mid" cx=${CENTRE} cy=${CENTRE}
+          r=${this.radius(max / 4, max)} />
         ${[0, 6, 12, 18].map((hour) => {
           const from = polar(hour, RADIUS_IN);
           const to = polar(hour, RADIUS_OUT);
@@ -535,7 +567,7 @@ export class PowerOrbCard extends LitElement {
             <text class="hour" x=${label[0]} y=${label[1]}>${String(hour).padStart(2, "0")}</text>
           `;
         })}
-        ${this.renderBand(max)} ${this.renderTicks(max)}
+        ${this.renderBand(max)} ${this.renderTicks(max, live)}
         ${traces.map((points) => svg`<polyline class="trace" points=${points} />`)}
         ${bead
           ? svg`
@@ -543,7 +575,9 @@ export class PowerOrbCard extends LitElement {
               <circle class="bead" cx=${bead[0]} cy=${bead[1]} r="6" />
             `
           : nothing}
-        <text class="scale" x=${CENTRE} y="14">${scale.value} ${scale.unit}</text>
+        <text class="scale" x="2" y="14" text-anchor="start">
+          ${scale.value} ${scale.unit}
+        </text>
       </svg>
     `;
   }
@@ -578,12 +612,13 @@ export class PowerOrbCard extends LitElement {
       ? this.today.map((entry) => {
           const band = hours[entry.hour];
           if (!band) return nothing;
-          const above = entry.watts > band.high;
-          const below = entry.watts < band.low;
-          if (!above && !below) return nothing;
+          const high = band.liveHigh ?? band.high;
+          const low = band.liveLow ?? band.low;
+          const above = entry.watts > high;
+          if (!above && entry.watts >= low) return nothing;
           return svg`<line
             class=${`tick ${above ? "above" : "below"}`}
-            x1=${x(entry.hour + 0.5)} y1=${y(above ? band.high : band.low)}
+            x1=${x(entry.hour + 0.5)} y1=${y(above ? high : low)}
             x2=${x(entry.hour + 0.5)} y2=${y(entry.watts)}
           />`;
         })
@@ -713,6 +748,12 @@ export class PowerOrbCard extends LitElement {
           >
             ${deviation ? deviation.sentence : "Comparing with your normal day"}
           </p>
+
+          <div class="legend" aria-hidden="true">
+            <span class="key band"></span>usual range
+            <span class="key line"></span>today
+            <span class="key dot"></span>now
+          </div>
 
           <div class="chips">
             ${this.renderChip("solar")} ${this.renderChip("grid")}
@@ -851,18 +892,22 @@ export class PowerOrbCard extends LitElement {
       font-size: 12px;
     }
     .band {
-      fill: rgba(160, 178, 210, 0.24);
-      stroke: rgba(196, 212, 238, 0.55);
+      fill: rgba(160, 178, 210, 0.11);
+      stroke: rgba(196, 212, 238, 0.3);
       stroke-width: 1;
       stroke-linejoin: round;
     }
     .band-live {
       fill: none;
-      stroke: rgba(196, 212, 238, 0.34);
+      stroke: rgba(196, 212, 238, 0.3);
       stroke-dasharray: 4 4;
+    }
+    .rim.mid {
+      stroke-dasharray: 2 6;
     }
     .tick {
       stroke-width: 4;
+      stroke-linecap: round;
     }
     .tick.above {
       stroke: var(--orb-above);
@@ -927,10 +972,8 @@ export class PowerOrbCard extends LitElement {
       background: rgba(255, 255, 255, 0.05);
       box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
       font-size: 13px;
+      line-height: 1.3;
       text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
     .verdict.above {
       color: var(--orb-above);
@@ -941,9 +984,43 @@ export class PowerOrbCard extends LitElement {
     .verdict.unknown {
       color: #9aa0b4;
     }
+    .legend {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 4px 12px;
+      margin-top: 8px;
+      color: #767b90;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .key {
+      width: 14px;
+      height: 10px;
+      margin-right: 5px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .key.band {
+      background: rgba(160, 178, 210, 0.14);
+      box-shadow: inset 0 0 0 1px rgba(196, 212, 238, 0.4);
+      border-radius: 2px;
+    }
+    .key.line {
+      height: 2px;
+      background: var(--orb-home);
+    }
+    .key.dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--orb-home);
+    }
     .chips {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
       gap: 8px;
       margin-top: 8px;
     }
@@ -992,6 +1069,7 @@ export class PowerOrbCard extends LitElement {
       font-size: 9px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
+      white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }

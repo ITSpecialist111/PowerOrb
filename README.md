@@ -65,18 +65,21 @@ for every configured power sensor.
 | Baseline median below 50 W | Sentence suppressed; a percentage of nearly nothing is meaningless |
 | `recorder` keeping fewer than about 2 days of five-minute statistics | Band drawn, verdict suppressed, with a note asking you to raise `purge_keep_days` |
 
-The comparison is deliberately conservative. The in-band test uses the spread
-seen *within* past hours rather than the spread of hourly averages, so ordinary
-appliance cycling is far less likely to read as abnormal. It is not immune: the
-envelope is built from five-minute means, which still smooth a short burst, so a
-kettle or an induction hob can occasionally tip the verdict. Deviations are
-rounded to the nearest 5% and capped at "more than 2×" / "less than half",
-because a percentile drawn from 28 samples cannot justify finer precision.
+The comparison is deliberately conservative. The test uses the spread seen
+*within* past hours rather than the spread of hourly averages, with a further
+10% margin on top, so ordinary appliance cycling is unlikely to read as
+abnormal. It is not immune: the envelope is built from five-minute means, which
+still smooth a short burst, so a kettle or an induction hob can occasionally tip
+the verdict. The reported figure is measured against the boundary that was
+actually crossed, not the median — crossing a 1.6 kW upper bound at 1.74 kW is
+reported as 10% above, not as a multiple of a much lower median.
 
 The dial shows both ranges: a solid band for the typical hourly range, and a
-fainter dashed band behind it for the wider envelope the verdict actually tests
-against. A bead outside the solid band but inside the dashed one is genuinely
-normal.
+fainter dashed band for the wider envelope the verdict actually tests against.
+A bead outside the solid band but inside the dashed one is genuinely normal.
+Where today's line leaves the envelope, a coloured tick marks how far — including
+for the hour in progress, so whatever the sentence names is always visible on
+the dial.
 
 ## Installation
 
@@ -110,13 +113,16 @@ are valid HACS Dashboard sources.
 | `name` | string | `Power Orb` | Card heading |
 | `entity` | string | auto-discovered | Direct instantaneous power sensor |
 | `entities` | mapping | auto-discovered | Explicit solar, grid, and battery power sensors |
-| `max_power` | number | derived, minimum 1000 W | Floor for the radial scale ceiling |
+| `max_power` | number | derived | Fixes the radial scale ceiling instead of deriving it |
 | `unit` | `W` or `kW` | automatic | Display unit |
 
-The radial scale ceiling is the largest of `max_power`, the baseline's upper
-envelope and today's peak, rounded up to 1, 2 or 5 times a power of ten. It
-excludes the live reading on purpose, so a single spike cannot rescale the dial
-under you; a reading beyond the ceiling clips at the rim.
+Left unset, the ceiling is the largest of the baseline's upper envelope and
+today's peak, rounded up to 1, 2 or 5 times a power of ten. It excludes the
+live reading on purpose, so a single spike cannot rescale the dial under you;
+a reading beyond the ceiling clips at the rim. Setting `max_power` replaces
+that derivation outright — useful for pinning the scale across several cards,
+but a value far above your real load will squash the band into the middle of
+the dial.
 
 Example:
 
@@ -124,7 +130,6 @@ Example:
 type: custom:power-orb
 name: House load
 entity: sensor.home_power
-max_power: 10000
 unit: kW
 ```
 
@@ -156,7 +161,6 @@ entities:
     to: sensor.feed_in
   battery:
     inverted: sensor.battery_power
-max_power: 10000
 ```
 
 | Flow option | Meaning |

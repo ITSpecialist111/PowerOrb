@@ -70,25 +70,35 @@ describe("describeDeviation", () => {
     expect(describeDeviation(1_400, band)?.direction).toBe("normal");
   });
 
-  it("rounds the deviation to the nearest five percent", () => {
-    const result = describeDeviation(1_600, band);
-    expect(result?.direction).toBe("above");
-    expect(result?.sentence).toBe("60% above normal for 19:00–20:00");
+  it("allows a margin above the envelope before calling a departure", () => {
+    // liveHigh is 1500, so 1560 is outside the envelope but inside the margin.
+    expect(describeDeviation(1_560, band)?.direction).toBe("normal");
+    expect(describeDeviation(1_700, band)?.direction).toBe("above");
+  });
+
+  it("measures the departure against the boundary crossed, not the median", () => {
+    // 1800 is 1.2x the 1500 envelope, but 1.8x the 1000 median. Quoting the
+    // median would report 80% when the real departure is 20%.
+    expect(describeDeviation(1_800, band)?.sentence).toBe(
+      "20% above the usual range for 19:00–20:00",
+    );
   });
 
   it("caps extreme ratios rather than printing false precision", () => {
     expect(describeDeviation(9_000, band)?.sentence).toBe(
-      "More than 2× normal for 19:00–20:00",
+      "More than 2× the usual range for 19:00–20:00",
     );
     expect(describeDeviation(120, band)?.sentence).toBe(
-      "Less than half normal for 19:00–20:00",
+      "Less than half the usual range for 19:00–20:00",
     );
   });
 
-  it("never contradicts the graphic when the rounded deviation is zero", () => {
+  it("never contradicts the graphic by reporting a zero departure", () => {
+    // The margin means the smallest reportable departure is ten percent, so a
+    // tick is always drawn whenever the sentence names one.
     const tight = { ...band, median: 1_000, liveHigh: 1_010 };
-    expect(describeDeviation(1_015, tight)?.sentence).toBe(
-      "Just above normal for 19:00–20:00",
+    expect(describeDeviation(1_120, tight)?.sentence).toBe(
+      "10% above the usual range for 19:00–20:00",
     );
   });
 
