@@ -1,43 +1,59 @@
 # Power Orb
 
-Power Orb answers a question no other Home Assistant card answers: **is this
-normal?**
+**A Home Assistant card that answers a question no other energy card answers:
+is this normal?**
+
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz)
+[![Release](https://img.shields.io/github/v/release/ITSpecialist111/PowerOrb)](https://github.com/ITSpecialist111/PowerOrb/releases)
+[![Licence: MIT](https://img.shields.io/badge/Licence-MIT-yellow.svg)](LICENSE)
+
+<p align="center">
+  <img src="docs/images/dial-above.png" alt="Power Orb showing a house drawing 4.52 kW, 40 percent above its usual range for that hour" width="420">
+</p>
 
 Every energy card in the ecosystem shows you what is happening right now. Power
-Orb shows you what is happening right now *against your own household's normal
-day*. It draws a 24-hour dial where the angle is the time of day and the radius
-is **how far a reading sits from what that hour usually draws**:
+Orb shows you what is happening right now **against your own household's normal
+day**, and says so in a sentence.
 
-- **The ring** — the range your home usually draws at each hour, from the 5th
-  to the 95th percentile of the last 28 days. Because every hour is normalised
-  onto the same ring, normal is a **circle**.
-- **Today's line** — what you actually drew, hour by hour, from midnight,
-  coloured by how each hour compared.
-- **The bead** — your live reading right now, at the current angle.
+## How to read it
 
-That normalisation is the point. A household drawing 400 W overnight and 6 kW
-while the car charges has a ten-to-one range that no absolute scale flatters;
-here both are ordinary, so both sit on the ring, and a departure is a shape the
-eye catches instantly.
+Power Orb draws a 24-hour dial where the **angle is the time of day** and the
+**radius is how far a reading sits from what that hour usually draws**.
 
-Underneath, one sentence: *"30% above the usual range for 19:00–20:00"*, or
-simply *"Normal for 19:00–20:00"* — with a second line summarising how the day
-has gone so far.
+| | |
+| --- | --- |
+| **The ring** | The range your home usually draws at each hour, from the 5th to the 95th percentile of the last 28 days |
+| **Today's line** | What you actually drew, hour by hour from midnight, coloured by how each hour compared |
+| **The ticks** | How far outside the ring an hour went — fixed width, so distance is the only variable |
+| **The bead** | Your live reading right now, at the current angle, with its own verdict |
+| **The sentence** | *"40% above the usual range for 14:00–15:00"*, or simply *"Normal for 14:00–15:00"* |
+
+Because every hour is normalised onto the same ring, **normal is a circle**.
+
+That normalisation is the whole point. A household drawing 400 W overnight and
+6 kW while the car charges has a ten-to-one range that no absolute scale
+flatters — plot it linearly and the night is a flat line along the floor. Here
+both are ordinary, so both sit on the ring, and a departure becomes a shape the
+eye catches before it reads a single number.
+
+<table>
+<tr>
+<td width="55%" align="center">
+<img src="docs/images/dial-normal.png" alt="Power Orb reporting a normal live reading" width="340"><br>
+<sub><b>Right now is fine</b> — the bead sits on the ring,<br>even though the late morning ran hot</sub>
+</td>
+<td width="45%" align="center">
+<img src="docs/images/compact.png" alt="Power Orb in its compact day-strip layout" width="220"><br>
+<sub><b>Below 300px</b> the dial becomes a day strip<br>carrying the same band, line and ticks</sub>
+</td>
+</tr>
+</table>
 
 It uses the power sensors already configured in Home Assistant's Energy
 dashboard, so it needs no server, access token, or duplicate entity
 configuration. The baseline comes from `recorder` statistics, computed
 server-side, so it is correct the instant the card paints and identical on
 every device.
-
-Power Orb is compatible with Home Assistant 2026.7. The 2026.7 frontend keeps
-the custom-card APIs and `energy/get_prefs` WebSocket command used by this card.
-The component-size changes in that release do not affect Power Orb.
-
-The original Supervisor add-on has been replaced by a Lovelace custom card. The
-old add-on attempted to open Home Assistant's authenticated WebSocket from an
-Ingress page without a token and could not receive state updates. Power Orb now
-runs inside Home Assistant and uses its authenticated frontend API.
 
 ## Features
 
@@ -55,56 +71,13 @@ runs inside Home Assistant and uses its authenticated frontend API.
 - Supports W, kW and MW source sensors
 - Falls back to a cartesian day strip below 300px wide
 - Works offline after installation; no CDN resources
-- Honors reduced-motion accessibility preferences
+- Honours reduced-motion accessibility preferences
 - Optional direct power entity for installations without Energy configuration
 - Native refresh signal for automation and MCP integrations
 
-## What the baseline needs
-
-The dial always renders. The band and the sentence need `recorder` statistics
-for every configured power sensor.
-
-| Situation | What you see |
-| --- | --- |
-| No statistics for one or more sensors | Today's line and the live reading on an absolute scale, no ring, and a note naming what is missing |
-| Fewer than 7 days of history | "Learning your normal — N of 7 days", same absolute fallback |
-| 7 to 13 days | Ring drawn, marked provisional |
-| 14 days or more | Full behaviour |
-| An hour with fewer than 10 past samples | That hour is left as a gap in the ring, never interpolated |
-| Baseline median below 50 W | Sentence suppressed; a percentage of nearly nothing is meaningless |
-| `recorder` keeping fewer than about 2 days of five-minute statistics | Ring drawn, verdict suppressed, with a note asking you to raise `purge_keep_days` |
-
-The comparison is deliberately conservative, and it uses two ranges because it
-is answering two different questions.
-
-| What is judged | Against | Why |
-| --- | --- | --- |
-| A completed hour, drawn as today's line | The spread of hourly means, plus a tenth of a band width or 120 W, whichever is larger | An hourly mean can only sensibly be compared with other hourly means |
-| The live reading, drawn as the bead | The spread of five-minute values within past instances of this hour, plus 10% | An instant is not an average; judging it against hourly means would flag every kettle |
-
-The 5th to 95th percentile and the watt floor exist together to keep the base
-rate honest. A 10th-to-90th range puts a fifth of all ordinary hours outside it
-by construction, and a purely proportional margin can put the threshold inside
-sensor noise — a 200 W band would flag a 20 W difference, less than one
-downlight. Together they flag roughly one hour a day rather than four.
-
-The ring is the first of those, so today's line and the ring always agree. The
-second is drawn as a short bracket at the current angle only, where it applies,
-so the bead and the sentence always agree too. Neither is immune: the envelope
-is built from five-minute means, which still smooth a short burst, so a kettle
-or an induction hob can occasionally tip the verdict. The reported figure is
-measured against the boundary that was actually crossed, not the median.
-
-Today's line is coloured by how each hour compared — teal inside the ring, warm
-above it, cool below — and a tick marks how far. The bead takes the same colour
-from its own verdict. Hours not yet lived are left unshaded, so the dial
-visibly fills through the day. A reading more than six band widths above the
-range is pinned to the edge of the plot; hover or a screen reader recovers the
-exact figure.
-
-If recorder has no five-minute detail left, the ring and today's line still
-work and the live verdict is suppressed rather than computed from a
-distribution that cannot describe an instant.
+Compatible with Home Assistant 2026.7. The 2026.7 frontend keeps the
+custom-card APIs and `energy/get_prefs` WebSocket command this card uses, and
+the component-size changes in that release do not affect it.
 
 ## Installation
 
@@ -119,16 +92,17 @@ distribution that cannot describe an instant.
 type: custom:power-orb
 ```
 
-HACS installs the compiled `dist/power-orb.js` artifact. That artifact is kept
-in the repository intentionally so both the default branch and tagged releases
-are valid HACS Dashboard sources.
+HACS installs the compiled `dist/power-orb.js` artifact from the **latest
+release**, not from the default branch. That artifact is kept in the repository
+intentionally so both the default branch and tagged releases are valid HACS
+Dashboard sources.
 
 ### Manual
 
 1. Download `dist/power-orb.js` from this repository, or the `power-orb.js`
    asset from a tagged release, into `/config/www/power-orb/`.
 2. Add `/local/power-orb/power-orb.js` as a JavaScript module under
-   **Settings ÔåÆ Dashboards ÔåÆ Resources**.
+   **Settings → Dashboards → Resources**.
 3. Add the card using the YAML above.
 
 ## Configuration
@@ -155,8 +129,15 @@ entity: sensor.home_power
 unit: kW
 ```
 
-To visualize power entities that are not configured in the Energy dashboard,
-map each entity explicitly to its role. A role accepts one entity ID or a list:
+### Mapping entities explicitly
+
+For automatic discovery, configure **real-time power sensors** in
+**Settings → Dashboards → Energy**. Cumulative kWh meters are intentionally not
+converted into live power, because that produces inaccurate values between
+meter updates — so an Energy dashboard built only from kWh meters will not
+auto-discover, and needs the mapping below.
+
+Map each entity to its role. A role accepts one entity ID or a list:
 
 ```yaml
 type: custom:power-orb
@@ -194,8 +175,12 @@ entities:
 Each role accepts exactly one of those three forms, and every option takes one
 entity ID or a list. `from` and `to` must be used together, and are not
 available for `solar`. `entity` and `entities` cannot be used together.
-Remember that `max_power`, `unit`, and `name` are top-level options, not
-entries under `entities`.
+`max_power`, `unit` and `name` are top-level options, not entries under
+`entities`.
+
+Power Orb groups every configured live source by role — solar generation, grid
+import or export, battery supply or charging, and the resulting home demand —
+and those roles drive the chips and the self-powered percentage.
 
 ### Size
 
@@ -215,6 +200,55 @@ Below 300px of content width the dial is replaced by a cartesian day strip
 carrying the same band, the same line and the same ticks, because a dial that
 small cannot show a legible band. On a masonry view the card fills its column.
 
+## How the comparison works
+
+The dial always renders. The band and the sentence need `recorder` statistics
+for every configured power sensor.
+
+| Situation | What you see |
+| --- | --- |
+| No statistics for one or more sensors | Today's line and the live reading on an absolute scale, no ring, and a note naming what is missing |
+| Fewer than 7 days of history | "Learning your normal — N of 7 days", same absolute fallback |
+| 7 to 13 days | Ring drawn, marked provisional |
+| 14 days or more | Full behaviour |
+| An hour with fewer than 10 past samples | That hour is left as a gap in the ring, never interpolated |
+| Baseline median below 50 W | Sentence suppressed; a percentage of nearly nothing is meaningless |
+| `recorder` keeping fewer than about 2 days of five-minute statistics | Ring drawn, verdict suppressed, with a note asking you to raise `purge_keep_days` |
+
+The comparison is deliberately conservative, and it uses **two** ranges because
+it is answering two different questions.
+
+| What is judged | Against | Why |
+| --- | --- | --- |
+| A completed hour, drawn as today's line | The spread of hourly means, plus a tenth of a band width or 120 W, whichever is larger | An hourly mean can only sensibly be compared with other hourly means |
+| The live reading, drawn as the bead | The spread of five-minute values within past instances of this hour, plus 10% | An instant is not an average; judging it against hourly means would flag every kettle |
+
+The 5th-to-95th percentile and the watt floor exist together to keep the base
+rate honest. A 10th-to-90th range puts a fifth of all ordinary hours outside it
+*by construction*, and a purely proportional margin can put the threshold
+inside sensor noise — a 200 W band would flag a 20 W difference, less than one
+downlight. Together they flag roughly one hour a day rather than four.
+
+The ring is the first of those, so today's line and the ring always agree. The
+second is drawn as a short bracket at the current angle only, where it applies,
+so the bead and the sentence always agree too. Neither is immune: the envelope
+is built from five-minute means, which still smooth a short burst, so a kettle
+or an induction hob can occasionally tip the verdict. The reported figure is
+measured against the boundary that was actually crossed, not the median —
+crossing a 1.6 kW ceiling at 1.74 kW is a 9% departure, not the 3.5× that
+quoting the median would imply.
+
+Today's line is coloured by how each hour compared — teal inside the ring, warm
+above it, cool below — and a tick marks how far. The bead takes the same colour
+from its own verdict. Hours not yet lived are left unshaded, so the dial
+visibly fills through the day. A reading more than six band widths above the
+range is pinned to the edge of the plot; hover or a screen reader recovers the
+exact figure.
+
+If recorder has no five-minute detail left, the ring and today's line still
+work and the live verdict is suppressed rather than computed from a
+distribution that cannot describe an instant.
+
 ### Known limitations
 
 - In time zones with a half-hour offset such as `Asia/Kolkata`, Home Assistant's
@@ -223,17 +257,6 @@ small cannot show a legible band. On a masonry view the card fills its column.
   the baseline and today's series are bucketed identically.
 - The baseline is not split by weekday and weekend. At 28 days a weekend bucket
   would hold about 8 samples, too few to support a percentile.
-
-
-For automatic discovery, configure real-time power sensors in
-**Settings ÔåÆ Dashboards ÔåÆ Energy**. Cumulative kWh meters are intentionally not
-converted into live power because that produces inaccurate values between
-meter updates. Power Orb groups every configured live source by role: solar
-generation, grid import or export, battery supply or charging, and the resulting
-home demand. Flow direction and animation speed reflect each source's current
-direction and magnitude. Those same roles drive the self-powered percentage,
-solar-use percentage, and the plain-language recommendation shown below the
-demand trace.
 
 ## HASS MCP OpenClaw
 
@@ -252,7 +275,7 @@ fire_event_full("power_orb_refresh", {})
 ```
 
 Power Orb also reloads Energy preferences periodically, so this signal is an
-optimization rather than a requirement. No MCP token is ever sent to the
+optimisation rather than a requirement. No MCP token is ever sent to the
 browser.
 
 ## Development
@@ -264,14 +287,49 @@ npm install
 npm run check
 ```
 
-The HACS artifact is generated in `dist/` and must be committed whenever the
-source changes. CI rebuilds it and fails if the committed output is stale.
+`npm run check` runs the type check, the test suite and the build. The HACS
+artifact is generated in `dist/` and must be committed whenever the source
+changes; CI rebuilds it and fails if the committed output is stale.
 
-## HACS troubleshooting
+### Regenerating the screenshots
 
-If HACS previously reported
-`<Plugin ITSpecialist111/PowerOrb> Repository structure for main is not compliant`,
-refresh HACS and retry adding the custom **Dashboard** repository after updating
-to a commit that contains `dist/power-orb.js`. The old error means HACS inspected
-a revision that did not contain the compiled JavaScript file; it is not a Home
-Assistant 2026.7 dashboard API error.
+The images in this README are renders of the real built card against
+deterministic synthetic statistics, so they can be rebuilt whenever the design
+changes rather than being re-cropped by hand.
+
+```bash
+npm run build
+npx serve -l 4173 .
+```
+
+Then open `http://localhost:4173/docs/preview?scene=above`. The harness freezes
+the clock, stubs `ha-card`, and generates a 28-day baseline plus a partial day
+with a deliberate late-morning excursion. `?scene=` accepts `normal`, `above`
+or `below`, and `?zoom=` sets the render scale.
+
+## Troubleshooting
+
+**The card looks unchanged after a release.** HACS serves the latest *release*,
+not the default branch. Check which build a browser is running by looking for
+`/hacsfiles/PowerOrb/power-orb.js` in the dashboard resources — the `hacstag`
+query parameter ends with the installed version.
+
+**`Repository structure for main is not compliant`.** Refresh HACS and retry
+adding the custom **Dashboard** repository. That error means HACS inspected a
+revision that did not contain `dist/power-orb.js`; it is not a Home Assistant
+2026.7 dashboard API error.
+
+**Nothing is auto-discovered.** The Energy dashboard is probably configured
+with cumulative kWh meters only. Map the power sensors explicitly with
+`entities:` as shown above.
+
+## Background
+
+The original Supervisor add-on has been replaced by this Lovelace custom card.
+The old add-on attempted to open Home Assistant's authenticated WebSocket from
+an Ingress page without a token and could not receive state updates. Power Orb
+now runs inside Home Assistant and uses its authenticated frontend API.
+
+## Licence
+
+[MIT](LICENSE)

@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Power Orb preview</title>
+    <script>
+      // Pin the clock so regenerated screenshots are byte-comparable.
+      const FROZEN = Date.parse("2026-07-28T13:32:00Z");
+      const RealDate = Date;
+      Date.now = () => FROZEN;
+      window.__frozen = FROZEN;
+    </script>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        padding: 28px;
+        display: flex;
+        gap: 28px;
+        align-items: flex-start;
+        background: #0b0c10;
+        font-family: Roboto, system-ui, sans-serif;
+      }
+      /*
+       * The card is scaled with a transform rather than `zoom` so that it still
+       * lays out at its real CSS width: `zoom` would feed the doubled width to
+       * the card's ResizeObserver and the narrow frame would never go compact.
+       */
+      .stage {
+        flex: none;
+      }
+      .frame {
+        width: var(--frame, 420px);
+        transform: scale(var(--zoom));
+        transform-origin: top left;
+      }
+      ha-card {
+        display: block;
+        border-radius: 14px;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage"><div class="frame" id="wide"></div></div>
+    <div class="stage"><div class="frame" id="narrow" style="--frame: 280px"></div></div>
+
+    <script type="module">
+      import "../dist/power-orb.js";
+
+      class HaCard extends HTMLElement {}
+      customElements.define("ha-card", HaCard);
+
+      const HOUR = 3_600_000;
+      const FIVE = 300_000;
+      const FROZEN = window.__frozen;
+
+      /** Roughly the shape of a real solar-plus-battery household. */
+      const PROFILE = [
+        480, 520, 470, 3200, 620, 590, 560, 610, 640, 780, 860, 980, 2100,
+        2500, 2400, 2300, 2050, 1700, 900, 780, 640, 520, 460, 440,
+      ];
+
+      // A deterministic generator, so the screenshots never shift underneath us.
+      let seed = 20260728;
+      const random = () => {
+        seed = (seed * 1103515245 + 12345) % 2147483648;
+        return seed / 2147483648;
+      };
+
+      const localHour = (ts) =>
+        Number(
+          new Intl.DateTimeFormat("en-GB", {
+            timeZone: "Europe/London",
+            hourCycle: "h23",
+            hour: "2-digit",
+          }).format(new Date(ts)),
+        ) % 24;
+
+      const midnight = (() => {
+        let ts = FROZEN;
+        while (localHour(ts) !== 0) ts -= HOUR;
+        return Math.floor(ts / HOUR) * HOUR;
+      })();
+
+      /** Split a home-load figure into plausible solar, grid and battery parts. */
+      function channels(hour, load) {
+        const daylight = Math.max(0, Math.sin(((hour - 5) / 14) * Math.PI));
+        const solar = Math.round(daylight * 2600 * (0.75 + random() * 0.4));
+        let battery = 0;
+        if (solar > load + 200) battery = -Math.min(solar - load, 2600);
+        else if (hour >= 18 || hour <= 4) battery = Math.min(load, 900);
+        const grid = Math.round(load - solar - battery);
+        return {
+          "sensor.solar": solar,
+          "sensor.grid": grid,
+          "sensor.battery": Math.round(battery),
+        };
+      }
+
+      function series(start, end, step, jitter) {
+        const rows = { "sensor.solar": [], "sensor.grid": [], "sensor.battery": [] };
+        for (let ts = start; ts < end; ts += step) {
+          const hour = localHour(ts);
+          const base = PROFILE[hour];
+          const load = Math.max(120, base * (1 + (random() - 0.5) * jitter));
+          const parts = channels(hour, load);
+          for (const id of Object.keys(rows)) {
+            rows[id].push({ start: ts, end: ts + step, mean: parts[id] });
+          }
+        }
+        return rows;
+      }
+
+      const baseline = series(midnight - 28 * 24 * HOUR, midnight, HOUR, 0.5);
+      const envelope = series(midnight - 5 * 24 * HOUR, midnight, FIVE, 0.9);
+
+      // Today: ordinary overnight, then a heavy late morning so a departure is
+      // visible rather than having to be imagined.
+      const today = { "sensor.solar": [], "sensor.grid": [], "sensor.battery": [] };
+      for (let ts = midnight; ts < FROZEN - HOUR; ts += HOUR) {
+        const hour = localHour(ts);
+        const heavy = hour >= 10 && hour <= 12;
+        const load = PROFILE[hour] * (heavy ? 2.1 : 0.95 + random() * 0.1);
+        const parts = channels(hour, load);
+        for (const id of Object.keys(today)) {
+          today[id].push({ start: ts, end: ts + HOUR, mean: parts[id] });
+        }
+      }
+
+      // ?scene=normal|above|below picks the live reading, so each screenshot in
+      // the README can be regenerated without editing this file.
+      const SCENES = {
+        normal: { "sensor.solar": 2070, "sensor.grid": 500, "sensor.battery": -170 },
+        above: { "sensor.solar": 2070, "sensor.grid": 2620, "sensor.battery": -170 },
+        below: { "sensor.solar": 2070, "sensor.grid": 20, "sensor.battery": -1480 },
+      };
+      const params = new URLSearchParams(location.search);
+      const scene = params.get("scene") ?? "normal";
+      const live = SCENES[scene] ?? SCENES.normal;
+      document.documentElement.style.setProperty("--zoom", params.get("zoom") ?? "2");
+
+      const hass = {
+        config: { time_zone: "Europe/London" },
+        locale: { language: "en-GB" },
+        states: Object.fromEntries(
+          Object.entries(live).map(([id, value]) => [
+            id,
+            { state: String(value), attributes: { unit_of_measurement: "W" } },
+          ]),
+        ),
+        connection: { subscribeEvents: async () => () => {} },
+        async callWS(message) {
+          if (message.type === "recorder/get_statistics_metadata") {
+            return message.statistic_ids.map((id) => ({
+              statistic_id: id,
+              unit_class: "power",
+              has_mean: true,
+            }));
+          }
+          if (message.type === "recorder/statistics_during_period") {
+            if (message.period === "5minute") return envelope;
+            return Date.parse(message.start_time) >= midnight ? today : baseline;
+          }
+          return {};
+        },
+      };
+
+      const config = {
+        type: "custom:power-orb",
+        name: "House load",
+        unit: "kW",
+        entities: {
+          solar: "sensor.solar",
+          grid: "sensor.grid",
+          battery: "sensor.battery",
+        },
+      };
+
+      for (const id of ["wide", "narrow"]) {
+        const card = document.createElement("power-orb");
+        card.setConfig(config);
+        // Home Assistant hands the element its config and hass before adding it
+        // to the DOM, and the card starts loading history on connect.
+        card.hass = hass;
+        document.getElementById(id).append(card);
+      }
+
+      // A transformed element does not contribute its painted size to layout, so
+      // the page would end shorter than the cards and screenshots would clip.
+      const settle = () => {
+        for (const frame of document.querySelectorAll(".frame")) {
+          const box = frame.getBoundingClientRect();
+          frame.parentElement.style.width = `${box.width}px`;
+          frame.parentElement.style.height = `${box.height}px`;
+        }
+      };
+      requestAnimationFrame(() => requestAnimationFrame(settle));
+      new ResizeObserver(settle).observe(document.body);
+    </script>
+  </body>
+</html>
