@@ -1,6 +1,12 @@
 import { LitElement, css, html, nothing, svg } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
+  DEFAULT_FORECAST_ENTITY,
+  forecastRemaining,
+  readBatteryForecast,
+} from "./forecast";
+import type { BatteryForecast } from "./forecast";
+import {
   IDLE_WATTS,
   configuredEnergyFlows,
   discoverEnergyFlows,
@@ -173,6 +179,12 @@ export class PowerOrbCard extends LitElement {
     if (config.entity && config.entities !== undefined) {
       throw new Error("Configure either entity or entities, not both");
     }
+    if (
+      config.forecast_entity !== undefined && config.forecast_entity !== false &&
+      (typeof config.forecast_entity !== "string" || !/^sensor\.[a-z0-9_]+$/.test(config.forecast_entity))
+    ) {
+      throw new Error("forecast_entity must be a sensor entity ID or false");
+    }
     const configuredFlows =
       config.entities === undefined ? [] : configuredEnergyFlows(config.entities);
     this.config = config;
@@ -230,7 +242,12 @@ export class PowerOrbCard extends LitElement {
   }
 
   private watchedChanged(previous: HomeAssistant, next: HomeAssistant): boolean {
-    if (previous.locale !== next.locale) return true;
+    if (
+      previous.locale !== next.locale || previous.language !== next.language ||
+      previous.config?.time_zone !== next.config?.time_zone
+    ) return true;
+    const forecastId = this.forecastEntityId;
+    if (forecastId && previous.states[forecastId] !== next.states[forecastId]) return true;
     for (const channel of this.channels) {
       if (previous.states[channel.entityId] !== next.states[channel.entityId]) {
         return true;
@@ -241,6 +258,104 @@ export class PowerOrbCard extends LitElement {
 
   private get timeZone(): string | undefined {
     return this._hass?.config?.time_zone;
+  }
+
+  private get forecastEntityId(): string | undefined {
+    return this.config.forecast_entity === false
+      ? undefined
+      : this.config.forecast_entity ?? DEFAULT_FORECAST_ENTITY;
+  }
+
+  private batteryForecast() {
+    const id = this.forecastEntityId;
+    if (!id || !this._hass) return undefined;
+    const entity = this._hass.states[id];
+    if (!entity && this.config.forecast_entity === undefined) return undefined;
+    return readBatteryForecast(entity, this.now);
+  }
+
+  private forecastTime(timestamp: number): string {
+    return new Intl.DateTimeFormat(
+      this._hass?.locale?.language ?? this._hass?.language,
+      { hour: "2-digit", minute: "2-digit", timeZone: this.timeZone },
+    ).format(new Date(timestamp));
+  }
+
+  private forecastHeadline(forecast: BatteryForecast): string {
+    if (forecast.status === "runout") {
+      return `Reserve ~${this.forecastTime(forecast.runout!)}`;
+    }
+    if (forecast.status === "risk") return "Lasts, but a heavy day is at risk";
+    if (forecast.status === "offpeak") return "Off-peak — no run-out risk";
+    return `Lasts to ${this.forecastTime(forecast.end)}`;
+  }
+
+  private renderForecast() {
+    const result = this.batteryForecast();
+    if (!result) return nothing;
+    if (!result.forecast) {
+      return html`<p class="message forecast-error" role="status">${result.error}</p>`;
+    }
+    const f = result.forecast;
+    const number = (value: number, digits = 1) =>
+      new Intl.NumberFormat(this._hass?.locale?.language ?? this._hass?.language, {
+        maximumFractionDigits: digits,
+      }).format(value);
+    const cost = f.cost === null ? null : new Intl.NumberFormat(
+      this._hass?.locale?.language ?? this._hass?.language,
+      { style: "currency", currency: "GBP" },
+    ).format(f.cost);
+    return html`
+      <section class=${`forecast ${f.status}`} aria-label="Battery reserve forecast">
+        <div class="forecast-heading">
+          <span>Battery outlook</span>
+          <span>${number(f.soc)}% · reserve ${number(f.reserve)}%</span>
+        </div>
+        <strong>${this.forecastHeadline(f)}</strong>
+        ${f.status === "runout" && f.runout !== null
+          ? html`<span>${forecastRemaining(f.runout, this.now)}</span>` : nothing}
+        ${f.status !== "offpeak" && f.cautious !== null
+          ? html`<small>Heavy day: reserve ~${this.forecastTime(f.cautious)}</small>` : nothing}
+        ${f.status !== "offpeak" && f.shortfall !== null
+          ? html`<small>Expected peak import: ${number(f.shortfall)} kWh${cost === null ? "" : ` (~${cost})`}</small>`
+          : nothing}
+        <small>To ${this.forecastTime(f.end)} · updated ${this.forecastTime(f.updated)} · estimate</small>
+        ${f.status !== "offpeak"
+          ? html`<small>Battery arc: time covered · hollow marker: heavy-day reserve</small>`
+          : nothing}
+      </section>
+    `;
+  }
+
+  private renderForecastOrbit(strip = false) {
+    const f = this.batteryForecast()?.forecast;
+    if (!f || f.status === "offpeak") return nothing;
+    // Time alone drives this lane; SOC must not share the load-relative radius.
+    const hours = (timestamp: number) =>
+      fractionalHour(this.now, this.timeZone) + (timestamp - this.now) / 3_600_000;
+    const start = hours(this.now);
+    const end = hours(f.end);
+    if (end - start > 24) return nothing;
+    const stop = f.status === "runout" ? Math.max(this.now, f.runout!) : f.end;
+    const lane = (to: number) => strip
+      ? svg`<line x1=${start / 24 * 400} x2=${Math.min(to, 24) / 24 * 400} y1="8" y2="8" />`
+      : svg`<path d=${sector(start, to, 179, 183)} />`;
+    const marker = (timestamp: number, cautious: boolean) => {
+      const hour = hours(Math.max(timestamp, this.now));
+      if (timestamp > f.end || (strip && hour > 24)) return nothing;
+      const [x, y] = strip ? [hour / 24 * 400, 8] : polar(hour, 181);
+      return svg`<circle class=${cautious ? "forecast-cautious" : "forecast-stop"}
+        cx=${x} cy=${y} r=${cautious ? 3 : 4}>
+        <title>${cautious ? "Heavy-day reserve" : "Expected reserve"} ~${this.forecastTime(timestamp)}</title>
+      </circle>`;
+    };
+    return svg`<g class=${`forecast-orbit ${f.status}`}>
+      <title>Battery time coverage — ${this.forecastHeadline(f)}. Not a load or charge-level scale.</title>
+      <g class="forecast-track">${lane(end)}</g>
+      <g class="forecast-coverage">${lane(hours(stop))}</g>
+      ${f.cautious !== null ? marker(f.cautious, true) : nothing}
+      ${f.status === "runout" && f.runout !== null ? marker(f.runout, false) : nothing}
+    </g>`;
   }
 
   private connect(): Promise<void> {
@@ -683,6 +798,7 @@ export class PowerOrbCard extends LitElement {
           `;
         })}
         ${this.renderBand()} ${this.renderTicks(live)}
+        ${this.renderForecastOrbit()}
         ${this.traceSegments(live).map(
           (segment) =>
             svg`<polyline class=${`trace ${segment.state}`} points=${segment.points}>
@@ -797,6 +913,7 @@ export class PowerOrbCard extends LitElement {
           `,
         )}
         ${runs} ${ticks}
+        ${this.renderForecastOrbit(true)}
         ${segments.map(
           (segment) =>
             svg`<polyline class=${`trace ${segment.state}`} points=${segment.points} />`,
@@ -933,6 +1050,8 @@ export class PowerOrbCard extends LitElement {
             <span class="key-item"><span class="key dot"></span>now</span>
           </div>
 
+          ${this.renderForecast()}
+
           <div class="chips">
             ${this.renderChip("solar")} ${this.renderChip("grid")}
             ${this.renderChip("battery")}
@@ -963,6 +1082,72 @@ export class PowerOrbCard extends LitElement {
   }
 
   static styles = css`
+    .forecast {
+      --cp-text: var(--orb-text);
+      --cp-text-muted: var(--orb-text-muted);
+      --cp-border: var(--orb-battery);
+      --cp-accent: var(--orb-battery);
+      --cp-warning: var(--orb-solar);
+      display: grid;
+      gap: 4px;
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid var(--cp-border);
+      border-inline-start: 3px solid var(--cp-accent);
+      border-radius: 0.625rem;
+      color: var(--cp-text);
+      font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .forecast.runout,
+    .forecast.risk {
+      border-inline-start-color: var(--cp-warning);
+    }
+    .forecast-heading {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 4px 12px;
+      color: var(--cp-text-muted);
+      font-size: 11px;
+    }
+    .forecast strong {
+      font-size: 18px;
+      line-height: 1.4;
+    }
+    .forecast small {
+      color: var(--cp-text-muted);
+      line-height: 1.4;
+    }
+    .forecast-orbit {
+      --cp-accent: var(--orb-battery);
+      --cp-warning: var(--orb-solar);
+      color: var(--cp-accent);
+    }
+    .forecast-orbit.runout,
+    .forecast-orbit.risk {
+      color: var(--cp-warning);
+    }
+    .forecast-track {
+      fill: currentColor;
+      stroke: currentColor;
+      opacity: 0.15;
+    }
+    .forecast-coverage {
+      fill: currentColor;
+      stroke: currentColor;
+    }
+    .strip .forecast-track,
+    .strip .forecast-coverage {
+      stroke-width: 4;
+    }
+    .forecast-stop {
+      fill: currentColor;
+    }
+    .forecast-cautious {
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
     :host {
       display: block;
       --orb-solar: #ffc857;
@@ -971,6 +1156,8 @@ export class PowerOrbCard extends LitElement {
       --orb-home: #72f5dc;
       --orb-above: #ff7a5c;
       --orb-below: #a8e05f;
+      --orb-text: #f7f8ff;
+      --orb-text-muted: #8f93a8;
     }
     ha-card {
       overflow: hidden;
@@ -979,7 +1166,7 @@ export class PowerOrbCard extends LitElement {
         radial-gradient(circle at 8% 0%, rgba(95, 68, 132, 0.16), transparent 34%),
         linear-gradient(145deg, #11121a, #08090e 60%, #0d1018);
       border: 1px solid rgba(255, 255, 255, 0.08);
-      color: #f7f8ff;
+      color: var(--orb-text);
     }
     .card {
       padding: 20px;

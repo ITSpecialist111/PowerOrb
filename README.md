@@ -67,6 +67,7 @@ every device.
   ink as the same deviation at 19:00
 - Automatically discovers solar, grid, battery and home power
 - Live chips for each source with direction: importing, exporting, charging, supplying
+- Optional battery reserve forecast on the same clock, with a cautious outlook
 - Reacts when Energy dashboard preferences change
 - Supports W, kW and MW source sensors
 - Falls back to a cartesian day strip below 300px wide
@@ -114,6 +115,7 @@ Dashboard sources.
 | `entities` | mapping | auto-discovered | Explicit solar, grid, and battery power sensors |
 | `max_power` | number | derived | Scale ceiling used only while there is no baseline yet |
 | `unit` | `W` or `kW` | automatic | Display unit |
+| `forecast_entity` | string or `false` | `sensor.battery_runout_forecast` | Battery forecast sensor; absent default sensors are hidden, `false` disables |
 
 Once a baseline exists the dial is band-relative and has no absolute ceiling,
 so `max_power` is ignored. Before then — during the first week, or where
@@ -181,6 +183,43 @@ available for `solar`. `entity` and `entities` cannot be used together.
 Power Orb groups every configured live source by role — solar generation, grid
 import or export, battery supply or charging, and the resulting home demand —
 and those roles drive the chips and the self-powered percentage.
+
+### Battery reserve forecast
+
+When `sensor.battery_runout_forecast` exists, Power Orb reads its predictions
+directly; it does not recalculate them from instantaneous battery power.
+Use `forecast_entity: sensor.your_forecast` to select another compatible sensor,
+or `forecast_entity: false` to retain the original card without a forecast.
+
+The thin outer arc shares the dial's time-of-day clock, but **not** its
+load-relative radius: it shows time covered by the battery until its expected
+reserve time (or the forecast horizon). A solid marker means expected reserve;
+a hollow marker means the cautious, heavy-day reserve time. The faint remainder
+continues to the forecast horizon. In compact mode this becomes a lane above
+the day strip, clipped at midnight; the text retains the full forecast.
+This is not a state-of-charge curve and does not change the usual-load ring,
+today's trace or the live verdict.
+
+The outlook below the orb shows forecast SOC, the configured reserve, expected
+reserve time/countdown, cautious time, and expected peak import in kWh and GBP
+when supplied. Reaching reserve means the battery stops supplying the home,
+**not** that the home loses power. Forecast times use Home Assistant's time zone.
+All values are estimates from the sensor, including its tariff/PV/load model.
+
+The supported sensor contract is:
+
+- State: `Run-out`, `At risk`, `OK`, or `Off-peak`.
+- Attributes: `updated` (ISO timestamp), `soc` and `min_soc` (numeric percentages),
+  `peak_end_ts` (forecast horizon as Unix milliseconds).
+- `runout_ts` is required for `Run-out`; `runout_ts_cautious` is required for
+  `At risk`. Both are Unix milliseconds, not formatted clock strings.
+- Optional: `shortfall_kwh`, `est_cost_gbp` (non-negative numbers).
+
+Updates older than 25 minutes, expired horizons, unavailable sensors and
+incomplete data show an explicit notice and no forecast arc. The card watches
+forecast attributes as well as power changes and rechecks age every 30 seconds.
+An absent default sensor leaves existing installations unchanged; an explicitly
+configured but missing sensor shows an unavailable notice.
 
 ### Size
 

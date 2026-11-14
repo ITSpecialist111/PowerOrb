@@ -32,6 +32,7 @@ export interface PowerOrbConfig {
   entities?: Partial<Record<EnergyFlowKind, EnergyFlowConfig>>;
   max_power?: number;
   unit?: "W" | "kW";
+  forecast_entity?: string | false;
 }
 
 export interface EnergyPreferences {
